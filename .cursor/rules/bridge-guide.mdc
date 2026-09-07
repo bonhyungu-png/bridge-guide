@@ -1,0 +1,7 @@
+---
+description: 교량 안전점검 지침서 질의 규칙
+alwaysApply: false
+---
+
+교량 지침서 관련 질문에는 `skills/bridge-guide/SKILL.md`의 절차를 따른다.
+등급 판정은 직접 계산하지 말고 `python -m bridgekb` 도구를 호출한다.
