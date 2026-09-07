@@ -247,6 +247,69 @@
   .empty-state { color: var(--text-3); font-size: 13.5px; padding: 30px 4px; text-align: center; }
   .count-line { font-size: 12.5px; color: var(--text-3); margin-bottom: 10px; font-family: var(--mono); }
 
+  /* ---- 질문하기(채팅) ---- */
+  .ask-unavailable {
+    background: var(--warn-weak); color: var(--warn); border-radius: 10px;
+    padding: 12px 14px; font-size: 13.5px; line-height: 1.6; margin-bottom: 16px;
+  }
+  .ask-unavailable b { color: var(--warn); }
+
+  .chat-log { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  .chat-log:empty { display: none; }
+  .msg { display: flex; flex-direction: column; gap: 5px; max-width: 100%; }
+  .msg .who {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  .msg .bubble {
+    border-radius: 10px; padding: 12px 14px; font-size: 14.5px; line-height: 1.7;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .msg.me .bubble { background: var(--accent-weak); color: var(--text); border: 1px solid var(--border); }
+  .msg.ai .bubble { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .msg.ai .bubble.pending { color: var(--text-3); font-style: italic; }
+  .msg .bubble b { font-weight: 600; }
+  .msg .bubble code {
+    font-family: var(--mono); font-size: 13px; background: var(--surface-2);
+    border-radius: 4px; padding: 1px 5px;
+  }
+
+  .tool-trace { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tool-chip {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    background: var(--accent-weak); border-radius: 5px; padding: 2px 7px;
+  }
+  .tool-chip.err { color: var(--bad); background: var(--bad-weak); }
+
+  .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
+  .chat-input-row textarea {
+    flex: 1; font-family: var(--sans); font-size: 14.5px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: 8px; padding: 10px 12px; outline: none; resize: vertical;
+    line-height: 1.6;
+  }
+  .chat-input-row textarea:focus { border-color: var(--accent); }
+  .chat-input-row textarea::placeholder { color: var(--text-3); }
+  .chat-buttons { display: flex; flex-direction: column; gap: 6px; justify-content: flex-start; }
+  .chat-buttons .go-btn { padding: 10px 18px; }
+  .stop-btn {
+    all: unset; cursor: pointer; text-align: center; font-size: 13px; font-weight: 500;
+    color: var(--bad); background: var(--bad-weak); border-radius: 8px; padding: 7px 18px;
+  }
+  .chat-hint { font-size: 12px; color: var(--text-3); margin-top: 7px; }
+
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 18px; }
+  .examples .ex-label {
+    font-size: 11px; color: var(--text-3); text-transform: uppercase;
+    letter-spacing: .06em; margin-right: 2px;
+  }
+  .examples .ex {
+    all: unset; cursor: pointer; font-size: 12.5px; color: var(--text-2);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 5px 11px;
+  }
+  .examples .ex:hover { border-color: var(--accent); color: var(--accent); }
+
   footer.foot {
     margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
     font-size: 12px; color: var(--text-3); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
@@ -269,13 +332,44 @@
 
   <div class="layout">
     <nav class="tabs" id="tabs">
-      <button data-tab="anchor" class="active">표 조회 <span class="n">Table</span></button>
+      <button data-tab="ask" class="active">질문하기 <span class="n">Ask</span></button>
+      <button data-tab="anchor">표 조회 <span class="n">Table</span></button>
       <button data-tab="grade">등급 판정 <span class="n">Grade</span></button>
       <button data-tab="search">본문 검색 <span class="n">Search</span></button>
     </nav>
 
     <main>
-      <section class="panel active" id="panel-anchor">
+      <section class="panel active" id="panel-ask">
+        <h2 class="panel-title">질문하기</h2>
+        <p class="panel-desc">지침서에 대해 그냥 물어보세요. 등급은 이 페이지 안의 판정규칙표를 코드가 직접 대조해 계산하고, 답에는 항상 연도·표번호·면수를 붙입니다.</p>
+
+        <div id="askUnavailable" class="ask-unavailable" hidden>
+          <b>질문 기능은 claude.ai에서 이 페이지를 열었을 때만 작동합니다.</b>
+          로컬 파일로 열었거나 다른 곳에 복사된 사본에서는 Claude에 연결할 수 없습니다.
+          왼쪽의 <b>표 조회 · 등급 판정 · 본문 검색</b> 탭은 인터넷 없이도 그대로 쓸 수 있습니다.
+        </div>
+
+        <div id="chatLog" class="chat-log"></div>
+
+        <div class="chat-input-row">
+          <textarea id="chatBox" rows="2" placeholder="예: 콘크리트 바닥판 균열폭이 0.25mm면 몇 등급인가요?"></textarea>
+          <div class="chat-buttons">
+            <button class="go-btn" id="chatSend">보내기</button>
+            <button class="stop-btn" id="chatStop" hidden>중지</button>
+          </div>
+        </div>
+        <div class="chat-hint" id="chatHint">Enter로 보내고, Shift+Enter로 줄바꿈합니다.</div>
+
+        <div class="examples" id="chatExamples">
+          <span class="ex-label">예시</span>
+          <button class="ex">콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?</button>
+          <button class="ex">데크플레이트 부식은 어느 항목으로 평가해?</button>
+          <button class="ex">표1.31이 2024년이랑 2026년이랑 어떻게 달라?</button>
+          <button class="ex">교대 세굴이 심하면 중대한 결함이야?</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-anchor">
         <h2 class="panel-title">표 조회</h2>
         <p class="panel-desc">표 번호("1.31") 또는 제목 일부("부재별 가중치")로 찾습니다. 같은 번호가 연도마다 다른 표를 가리키면 경고가 붙습니다 — 표 번호는 개정 때마다 밀립니다.</p>
         <div class="search-row">
@@ -698,6 +792,373 @@
     });
   }
   document.getElementById('bodyQuery').addEventListener('input', runBodySearch);
+
+  // ---------------- 질문하기(채팅) ----------------
+  // 원칙: 등급은 Claude가 아니라 이 페이지의 코드가 판정한다. Claude는 질문을
+  // 해석해 아래 도구를 고르고, 도구가 돌려준 값을 근거와 함께 설명할 뿐이다.
+
+  var RULES = [
+    '당신은 「시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편) 교량편」 질의응답 도우미입니다.',
+    '2022 / 2023 / 2024 / 2026 네 개 판본을 다룹니다. 한국어로 답합니다.',
+    '',
+    '반드시 지킬 규칙:',
+    '1. 등급을 스스로 계산하지 마세요. 수치 판정은 반드시 grade_lookup 도구를 호출하고, 도구가 돌려준 등급만 인용합니다. "0.25는 0.1~0.3 사이니까 b"처럼 직접 비교하는 것은 금지입니다.',
+    '2. 모든 사실에 출처를 붙입니다: (연도판, 표번호, 면). 도구가 돌려준 출처를 그대로 씁니다.',
+    '3. 표 번호는 판본마다 밀립니다. 표 번호로 답하기 전에 table_lookup으로 연도를 확인하고, 연도마다 다른 표를 가리키면 그 경고를 반드시 함께 전합니다.',
+    '4. 질문에 연도가 없으면 2026년판을 기본으로 쓰되, 답변에 "2026년판 기준"이라고 명시합니다.',
+    '5. 수치 없는 서술형(정성) 기준은 등급을 확정하지 마세요. 해당 기준 원문을 보여주고 최종 판단은 점검자 몫이라고 밝힙니다.',
+    '6. 도구가 못 찾으면 모른다고 답합니다. 지침서에 없는 내용을 지어내지 마세요.',
+    '7. 부재명·지표명이 애매하면 list_members로 실제 이름을 확인한 뒤 진행합니다.',
+    '',
+    '알려진 함정: "데크플레이트 부식"은 철근부식이 아니라 누수 및 백태 계열 항목입니다. 표면손상은 부재에 따라 표면손상 / 열화 및 손상 / 표면열화로 이름이 다릅니다.',
+    '',
+    '답변은 짧고 구체적으로. 등급이 나오면 첫 줄에 결론(등급), 다음 줄에 근거 원문, 마지막에 출처를 적습니다.'
+  ].join('\n');
+
+  function findMember(year, q){
+    var rules = numericRulesFor(year);
+    var members = Array.from(new Set(rules.map(function(r){ return r.부재; })));
+    var t = squash(q);
+    var exact = members.find(function(m){ return squash(m) === t; });
+    if (exact) return exact;
+    return members.find(function(m){ return squash(m).indexOf(t) !== -1 || t.indexOf(squash(m)) !== -1; }) || null;
+  }
+  function findIndicator(year, member, q){
+    var rules = numericRulesFor(year).filter(function(r){ return r.부재 === member; });
+    var inds = Array.from(new Set(rules.map(function(r){ return r.지표; })));
+    var t = squash(q);
+    var exact = inds.find(function(i){ return squash(i) === t; });
+    if (exact) return exact;
+    return inds.find(function(i){ return squash(i).indexOf(t) !== -1 || t.indexOf(squash(i)) !== -1; }) || null;
+  }
+  function yearOf(v){
+    var y = String(v == null ? '' : v).trim();
+    return YEARS.indexOf(y) !== -1 ? y : YEARS[YEARS.length - 1];
+  }
+
+  var TOOLS = [
+    {
+      name: 'list_members',
+      description: '해당 연도판에서 수치 판정이 가능한 부재 목록과 각 부재의 지표 목록을 돌려준다. 사용자가 말한 부재·지표 이름이 실제 지침서 표기와 다를 때 정확한 이름을 찾기 위해 먼저 호출한다.',
+      inputSchema: { type: 'object', properties: {
+        year: { type: 'string', description: '연도. 2022/2023/2024/2026 중 하나. 생략하면 2026.' }
+      } },
+      execute: function(input){
+        var year = yearOf(input.year);
+        var rules = numericRulesFor(year);
+        var byMember = {};
+        rules.forEach(function(r){
+          byMember[r.부재] = byMember[r.부재] || new Set();
+          byMember[r.부재].add(r.지표);
+        });
+        return {
+          year: year,
+          members: Object.keys(byMember).sort().map(function(m){
+            return { member: m, indicators: Array.from(byMember[m]).sort() };
+          })
+        };
+      }
+    },
+    {
+      name: 'grade_lookup',
+      description: '부재·지표·실측값으로 등급을 판정한다. 페이지 안의 판정규칙표를 코드가 직접 대조해 등급·근거 원문·출처(표번호,면)를 돌려준다. 등급은 반드시 이 도구로만 구한다. 맞는 구간이 없으면 후보 조건들을 돌려준다.',
+      inputSchema: { type: 'object', properties: {
+        year: { type: 'string', description: '연도. 생략하면 2026.' },
+        member: { type: 'string', description: '부재명. 예: 콘크리트 바닥판' },
+        indicator: { type: 'string', description: '지표명. 예: 균열폭' },
+        value: { type: 'number', description: '실측값(숫자). 예: 0.25' }
+      }, required: ['member', 'indicator', 'value'] },
+      execute: function(input){
+        var year = yearOf(input.year);
+        var v = Number(input.value);
+        if (!isFinite(v)) throw new Error('value가 숫자가 아닙니다: ' + input.value);
+        var member = findMember(year, String(input.member || ''));
+        if (!member) return { found: false, reason: '그런 부재가 없습니다', hint: 'list_members로 실제 부재명을 확인하세요', year: year };
+        var indicator = findIndicator(year, member, String(input.indicator || ''));
+        if (!indicator) {
+          var inds = Array.from(new Set(numericRulesFor(year).filter(function(r){ return r.부재 === member; }).map(function(r){ return r.지표; })));
+          return { found: false, reason: '그 부재에 그런 지표가 없습니다', member: member, available_indicators: inds, year: year };
+        }
+        var cands = numericRulesFor(year).filter(function(r){ return r.부재 === member && r.지표 === indicator; });
+        var hit = cands.find(function(r){ return satisfies(r, v); });
+        if (hit) {
+          return { found: true, year: year, member: member, indicator: indicator, value: v,
+                   grade: hit.등급, quote: hit.원문, unit: hit.단위 || null,
+                   source: { table: hit.표, page: hit.면 } };
+        }
+        return { found: false, reason: '이 값에 맞는 수치 구간이 없습니다', year: year,
+                 member: member, indicator: indicator, value: v,
+                 candidates: cands.map(function(r){ return { grade: r.등급, quote: r.원문, table: r.표, page: r.면 }; }) };
+      }
+    },
+    {
+      name: 'qualitative_criteria',
+      description: '해당 부재의 서술형(정성) 상태평가기준 목록을 등급별로 돌려준다. 수치가 없는 손상(균열 형태, 부식 상태 등)을 물었을 때 근거 원문을 보여주기 위해 쓴다. 이 기준으로는 등급을 확정하지 말고 후보로만 제시한다.',
+      inputSchema: { type: 'object', properties: {
+        year: { type: 'string', description: '연도. 생략하면 2026.' },
+        member: { type: 'string', description: '부재명' }
+      }, required: ['member'] },
+      execute: function(input){
+        var year = yearOf(input.year);
+        var member = findMember(year, String(input.member || ''));
+        var all = allRulesFor(year);
+        if (!member) {
+          var names = Array.from(new Set(all.map(function(r){ return r.부재; })));
+          var t = squash(String(input.member || ''));
+          member = names.find(function(m){ return squash(m).indexOf(t) !== -1; }) || null;
+        }
+        if (!member) return { found: false, reason: '그런 부재가 없습니다', year: year };
+        var quals = all.filter(function(r){ return r.연산 === '정성' && r.부재 === member; });
+        return { found: quals.length > 0, year: year, member: member,
+                 note: '정성 기준입니다. 등급을 확정하지 말고 후보로만 제시하세요.',
+                 criteria: quals.slice(0, 40).map(function(r){
+                   return { grade: r.등급, item: r.항목, text: String(r.원문).slice(0, 300), table: r.표, page: r.면 };
+                 }) };
+      }
+    },
+    {
+      name: 'table_lookup',
+      description: '표 번호나 제목으로 표를 찾는다. 연도별 표 번호를 나란히 돌려주고, 같은 번호가 연도마다 다른 표를 가리키면 경고를 함께 돌려준다. 표 내용 자체가 필요하면 이어서 table_content를 호출한다.',
+      inputSchema: { type: 'object', properties: {
+        query: { type: 'string', description: '표 번호("1.31") 또는 제목 일부("부재별 가중치")' }
+      }, required: ['query'] },
+      execute: function(input){
+        var q = squash(String(input.query || ''));
+        var qNum = q.replace(/\./g, '');
+        var hits = anchorEntries.filter(function(e){
+          if (squash(e.제목).indexOf(q) !== -1) return true;
+          return Object.keys(e.연도별).some(function(y){
+            var no = e.연도별[y].번호;
+            return no && no.replace(/\./g, '') === qNum;
+          });
+        }).slice(0, 6);
+        if (!hits.length) return { found: false, query: String(input.query || '') };
+        return { found: true, results: hits.map(function(e){
+          var byYear = {};
+          Object.keys(e.연도별).sort().forEach(function(y){ byYear[y] = e.연도별[y].번호 ? ('표' + e.연도별[y].번호) : '무번호'; });
+          var warn = null;
+          Object.keys(e.연도별).forEach(function(y){
+            var no = e.연도별[y].번호;
+            if (!no) return;
+            var others = numberIndex[no] || {};
+            if (new Set(Object.values(others)).size > 1) {
+              warn = '표' + no + '은 연도마다 다른 표를 가리킵니다: ' +
+                Object.keys(others).sort().map(function(yy){ return yy + '=' + others[yy]; }).join(' / ');
+            }
+          });
+          var out = { title: e.제목, numbers_by_year: byYear };
+          if (warn) out.warning = warn;
+          return out;
+        }) };
+      }
+    },
+    {
+      name: 'table_content',
+      description: '표 하나의 실제 내용(등급별 기준 원문)을 돌려준다. table_lookup으로 제목을 확인한 뒤 그 제목으로 호출한다. 길면 잘라서 돌려준다.',
+      inputSchema: { type: 'object', properties: {
+        title: { type: 'string', description: '표 제목(table_lookup이 돌려준 title을 그대로)' },
+        year: { type: 'string', description: '연도. 생략하면 2026.' }
+      }, required: ['title'] },
+      execute: function(input){
+        var year = yearOf(input.year);
+        var t = squash(String(input.title || ''));
+        var entry = anchorEntries.find(function(e){ return squash(e.제목) === t; }) ||
+                    anchorEntries.find(function(e){ return squash(e.제목).indexOf(t) !== -1; });
+        if (!entry) return { found: false, reason: '그 제목의 표가 없습니다' };
+        var d = entry.연도별[year];
+        if (!d) return { found: false, reason: year + '년판에는 이 표가 없습니다',
+                         available_years: Object.keys(entry.연도별).sort() };
+        return { found: true, year: year, title: entry.제목, number: d.번호,
+                 content: String(d.내용).slice(0, 6000) };
+      }
+    },
+    {
+      name: 'body_search',
+      description: '지침서 본문 문단을 검색해 일치하는 문단들을 절 이름과 함께 돌려준다. 절차·정의·적용범위 같은 서술형 질문("선택과업은 언제 하는가", "중대한 결함이란")에 쓴다.',
+      inputSchema: { type: 'object', properties: {
+        query: { type: 'string', description: '검색어' },
+        year: { type: 'string', description: '연도. 생략하면 2026.' }
+      }, required: ['query'] },
+      execute: function(input){
+        var year = yearOf(input.year);
+        var q = String(input.query || '').trim();
+        if (!q) throw new Error('query가 비었습니다');
+        var out = [];
+        (DATA.본문[year] || []).forEach(function(sec){
+          sec.내용.split('\n').forEach(function(line){
+            if (out.length >= 8) return;
+            var content = null;
+            if (line.indexOf('내용: ') === 0) content = line.slice(4);
+            else if (/^#{2,5} /.test(line)) content = line.replace(/^#{2,5} /, '');
+            if (content && content.indexOf(q) !== -1) {
+              out.push({ section: sec.절, text: content.slice(0, 400) });
+            }
+          });
+        });
+        return { found: out.length > 0, year: year, query: q, hits: out };
+      }
+    }
+  ];
+
+  var chatLogEl = document.getElementById('chatLog');
+  var chatBox = document.getElementById('chatBox');
+  var chatSend = document.getElementById('chatSend');
+  var chatStop = document.getElementById('chatStop');
+  var chatHint = document.getElementById('chatHint');
+  var askUnavailable = document.getElementById('askUnavailable');
+  var sampleFn = null;
+  var toolsOk = false;
+  var turns = [];
+  var busy = false;
+  var ctl = null;
+
+  function fmt(text){
+    return esc(text)
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  function addMsg(who, cls){
+    var el = document.createElement('div');
+    el.className = 'msg ' + cls;
+    el.innerHTML = '<div class="who">' + esc(who) + '</div><div class="bubble"></div>';
+    chatLogEl.appendChild(el);
+    el.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    return el.querySelector('.bubble');
+  }
+
+  function errorCopy(code){
+    switch (code) {
+      case 'not_granted': return '이 페이지가 Claude를 쓰도록 허용되지 않았습니다. 왼쪽 탭에서 직접 조회해 주세요.';
+      case 'rate_limited': return '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.';
+      case 'session_expired': return 'claude.ai에 다시 로그인한 뒤 시도해 주세요.';
+      case 'refused': return '이 질문에는 답할 수 없습니다. 다르게 물어봐 주세요.';
+      case 'empty_completion': return '답을 만들지 못했습니다. 질문을 더 구체적으로 적어 주세요.';
+      case 'prompt_too_large': return '대화가 너무 길어졌습니다. 새 질문으로 다시 시작해 주세요.';
+      case 'cancelled': return null;
+      default: return '연결에 문제가 있었습니다. 잠시 후 다시 시도해 주세요.';
+    }
+  }
+
+  function setBusy(on){
+    busy = on;
+    chatSend.disabled = on;
+    chatSend.style.opacity = on ? '.5' : '';
+    chatStop.hidden = !on;
+  }
+
+  async function ask(question){
+    if (busy || !sampleFn) return;
+    var q = String(question || '').trim();
+    if (!q) return;
+    chatBox.value = '';
+
+    addMsg('나', 'me').textContent = q;
+    turns.push({ role: 'user', content: q });
+    // 대화가 길어지면 오래된 것부터 버린다(지시문 턴은 매 호출마다 새로 앞에 붙인다).
+    while (turns.length > 8) turns.shift();
+
+    var bubble = addMsg('교량 지침서 가이드', 'ai');
+    bubble.classList.add('pending');
+    bubble.textContent = '생각하는 중...';
+
+    var trace = document.createElement('div');
+    trace.className = 'tool-trace';
+    bubble.parentElement.appendChild(trace);
+
+    function note(label, bad){
+      var chip = document.createElement('span');
+      chip.className = 'tool-chip' + (bad ? ' err' : '');
+      chip.textContent = label;
+      trace.appendChild(chip);
+    }
+
+    var wrapped = TOOLS.map(function(t){
+      return {
+        name: t.name, description: t.description, inputSchema: t.inputSchema,
+        execute: function(input, context){
+          try {
+            var r = t.execute(input || {}, context);
+            note(t.name + (input && input.member ? ' · ' + input.member : ''));
+            return r;
+          } catch (e) {
+            note(t.name + ' 실패', true);
+            throw e;
+          }
+        }
+      };
+    });
+
+    ctl = new AbortController();
+    setBusy(true);
+    var first = true;
+    try {
+      var res = await sampleFn([{ role: 'user', content: RULES }].concat(turns), {
+        tools: wrapped,
+        cache: false,
+        signal: ctl.signal,
+        onText: function(u){
+          if (first) { bubble.classList.remove('pending'); first = false; }
+          bubble.innerHTML = fmt(u.text);
+        }
+      });
+      bubble.classList.remove('pending');
+      bubble.innerHTML = fmt(res.text);
+      turns.push({ role: 'assistant', content: res.text });
+      if (res.truncated) note('답이 길어 잘렸습니다', true);
+    } catch (e) {
+      var kept = e && e.text ? e.text : '';
+      var copy = errorCopy(e && e.code);
+      bubble.classList.remove('pending');
+      if (kept) {
+        bubble.innerHTML = fmt(kept);
+        if (copy) note(copy, true);
+      } else if (copy) {
+        bubble.classList.add('pending');
+        bubble.textContent = copy;
+      } else {
+        bubble.parentElement.remove();
+      }
+      // 실패한 턴은 대화에서 빼서 다음 질문이 깨끗하게 시작하도록 한다.
+      if (turns.length && turns[turns.length - 1].role === 'user') turns.pop();
+    } finally {
+      setBusy(false);
+      ctl = null;
+    }
+  }
+
+  chatSend.addEventListener('click', function(){ ask(chatBox.value); });
+  chatStop.addEventListener('click', function(){ if (ctl) ctl.abort(); });
+  chatBox.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(chatBox.value); }
+  });
+  document.querySelectorAll('#chatExamples .ex').forEach(function(b){
+    b.addEventListener('click', function(){ ask(b.textContent); });
+  });
+
+  function disableAsk(){
+    askUnavailable.hidden = false;
+    chatBox.disabled = true;
+    chatSend.disabled = true;
+    chatSend.style.opacity = '.5';
+    chatHint.textContent = '';
+    document.getElementById('chatExamples').hidden = true;
+    openTab('anchor');
+  }
+
+  (async function initAsk(){
+    try {
+      if (!window.claude || !window.claude.use) { disableAsk(); return; }
+      var s = await window.claude.use('sample');
+      if (!s) { disableAsk(); return; }
+      var lim = await s.limits().catch(function(){ return null; });
+      toolsOk = !!(lim && lim.tools);
+      if (!toolsOk) { disableAsk(); return; }   // 도구 없이는 등급을 코드로 판정할 수 없다
+      sampleFn = s;
+    } catch (e) {
+      disableAsk();
+    }
+  })();
 
   // ---------------- 초기 상태 ----------------
   runAnchorSearch();
