@@ -32,7 +32,10 @@ EXTERNAL_REF = re.compile(r"건설기준코드|한국산업규격|KS\s*[A-Z]\s*\
 
 # 지표명 자리에 들어오면 안 되는 것들 (파서 오염 신호)
 POLLUTION_RANGE = re.compile(r"^\d+(\.\d+)?\s*[㎜mm%]*\s*(이상|미만|이하|초과)")
-POLLUTION_TRUNCATED = re.compile(r"(에\s*폭|단면의|,\s*[가-힣]{1,2}$)")
+# '~에 폭'은 넣지 않는다 - "교대와 날개벽사이에 폭"처럼 그 자체로 완결된 지표명인
+# 경우가 많아 오탐이 났다(값 앞부분을 잘라내는 지표명() 설계상 '폭'으로 끝나는
+# 이름이 흔하다). '단면의'류만 진짜 문장 잘림 신호로 남긴다.
+POLLUTION_TRUNCATED = re.compile(r"(단면의|,\s*[가-힣]{1,2}$)")
 
 
 @dataclass
