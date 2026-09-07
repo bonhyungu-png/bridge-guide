@@ -1,7 +1,7 @@
 {
   "name": "bridge-guide",
   "displayName": "교량 지침서 가이드",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "「시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편) 교량편」 질의응답. 연도별 개정 추적, 손상 항목 분류, 등급 판정 근거, 법령 연결을 제공한다.",
   "author": {
     "name": "BMS 연구팀"

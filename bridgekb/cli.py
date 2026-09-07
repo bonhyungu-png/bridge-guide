@@ -11,7 +11,7 @@ import argparse
 import json
 import sys
 
-from . import anchor, config
+from . import anchor, config, tools
 
 NOT_BUILT = {
     "status": "not_built",
@@ -72,6 +72,26 @@ def cmd_anchor(args) -> dict:
     return anchor.lookup(args.query, args.year)
 
 
+def cmd_grade(args) -> dict:
+    """등급 판정 - MCP의 grade_lookup과 같은 함수를 부른다(답이 갈리면 안 된다)."""
+    return tools.grade_lookup(args.member, args.indicator, args.value, args.year)
+
+
+def cmd_search(args) -> dict:
+    return tools.body_search(args.query, args.year)
+
+
+def cmd_tools(_args) -> dict:
+    """등록된 도구 명세. MCP로 노출되는 것과 같은 목록이다."""
+    return {"tools": tools.descriptors()}
+
+
+def cmd_mcp(_args) -> int:
+    """MCP 서버를 stdio로 띄운다. 이 명령만 JSON을 찍지 않는다(프로토콜이 stdout을 쓴다)."""
+    from . import mcp_server
+    raise SystemExit(mcp_server.serve())
+
+
 def cmd_stub(name):
     def _run(_args) -> dict:
         out = dict(NOT_BUILT)
@@ -94,11 +114,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("query", help='예: "1.31" 또는 "일반교량 가중치"')
     p.set_defaults(func=cmd_anchor)
 
+    p = sub.add_parser("grade", help="수치 -> 등급 판정")
+    p.add_argument("member", help="부재명. 예: 콘크리트 바닥판")
+    p.add_argument("indicator", help="지표명. 예: 균열폭")
+    p.add_argument("value", help="실측값. 예: 0.25")
+    p.set_defaults(func=cmd_grade)
+
+    p = sub.add_parser("search", help="본문 검색")
+    p.add_argument("query", help="검색어")
+    p.set_defaults(func=cmd_search)
+
+    p = sub.add_parser("tools", help="도구 명세 목록 (MCP로 노출되는 것과 동일)")
+    p.set_defaults(func=cmd_tools)
+
+    p = sub.add_parser("mcp", help="MCP 서버를 stdio로 실행 (AI 도구에 등록해 쓴다)")
+    p.set_defaults(func=cmd_mcp)
+
     for name, help_text in [
         ("concept", "손상 이름 -> 정식 항목·분류 (함정 경고 포함)"),
-        ("grade", "수치 -> 등급 판정"),
         ("compare", "연도별 기준 비교"),
-        ("search", "본문 검색"),
         ("law", "법령 원문 조회"),
     ]:
         p = sub.add_parser(name, help=help_text)
@@ -109,6 +143,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    # 윈도우 콘솔 기본 인코딩(cp949)으로는 한글 JSON을 못 찍는다. 출력은 어느
+    # 환경에서든 UTF-8이어야 파이프로 받는 쪽이 같은 것을 본다.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, OSError):
+        pass
+
     ap = build_parser()
     args = ap.parse_args(argv)
     result = args.func(args)

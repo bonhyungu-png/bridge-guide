@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "bridge-guide": {
+      "command": "python",
+      "args": ["./bridge_mcp.py"]
+    }
+  }
+}
