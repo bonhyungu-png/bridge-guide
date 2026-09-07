@@ -1,0 +1,726 @@
+<meta charset="utf-8">
+<title>교량 지침서 가이드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f5f1e7;
+    --surface: #fffdf8;
+    --surface-2: #ece4d2;
+    --border: #ddd0b0;
+    --border-strong: #c9b98d;
+    --text: #211d15;
+    --text-2: #6f6552;
+    --text-3: #948a74;
+    --accent: #2f6690;
+    --accent-ink: #ffffff;
+    --accent-weak: #dfe9f0;
+    --good: #3c7a4c;
+    --good-weak: #e0eee1;
+    --warn: #96660c;
+    --warn-weak: #f2e6cb;
+    --bad: #a83c3c;
+    --bad-weak: #f5dfdf;
+    --shadow: 0 1px 2px rgba(40,32,10,.06), 0 4px 14px rgba(40,32,10,.06);
+    --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --sans: 'IBM Plex Sans KR', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17140f;
+      --surface: #201b13;
+      --surface-2: #291f19;
+      --border: #3c3122;
+      --border-strong: #55452c;
+      --text: #ece3cf;
+      --text-2: #ab9d80;
+      --text-3: #8a7d63;
+      --accent: #7fb2da;
+      --accent-ink: #0f2333;
+      --accent-weak: #22374a;
+      --good: #72bd83;
+      --good-weak: #1f3324;
+      --warn: #dcac52;
+      --warn-weak: #3a2e13;
+      --bad: #e08a8a;
+      --bad-weak: #3a2222;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17140f;
+    --surface: #201b13;
+    --surface-2: #291f19;
+    --border: #3c3122;
+    --border-strong: #55452c;
+    --text: #ece3cf;
+    --text-2: #ab9d80;
+    --text-3: #8a7d63;
+    --accent: #7fb2da;
+    --accent-ink: #0f2333;
+    --accent-weak: #22374a;
+    --good: #72bd83;
+    --good-weak: #1f3324;
+    --warn: #dcac52;
+    --warn-weak: #3a2e13;
+    --bad: #e08a8a;
+    --bad-weak: #3a2222;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent-weak); }
+
+  .app { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* ---- header ---- */
+  header.top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    margin-bottom: 22px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .brand h1 {
+    font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .brand .tag {
+    font-family: var(--mono); font-size: 12px; color: var(--text-3);
+    border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px;
+  }
+  .sub { color: var(--text-2); font-size: 13.5px; margin-top: 4px; max-width: 62ch; }
+
+  .years { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .years .label { font-size: 11.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-right: 2px; }
+  .year-chip {
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border-strong); background: var(--surface);
+    color: var(--text-2); border-radius: 999px; padding: 5px 12px; cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .year-chip:hover { border-color: var(--accent); }
+  .year-chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  /* ---- layout ---- */
+  .layout { display: grid; grid-template-columns: 190px 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+  nav.tabs {
+    display: flex; flex-direction: column; gap: 3px; position: sticky; top: 20px;
+  }
+  @media (max-width: 720px) { nav.tabs { flex-direction: row; overflow-x: auto; position: static; } }
+  nav.tabs button {
+    all: unset; cursor: pointer; padding: 10px 12px; border-radius: 8px;
+    font-size: 14px; font-weight: 500; color: var(--text-2);
+    display: flex; align-items: center; gap: 9px; white-space: nowrap;
+  }
+  nav.tabs button .n { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+  nav.tabs button:hover { background: var(--surface-2); color: var(--text); }
+  nav.tabs button.active { background: var(--accent-weak); color: var(--accent); }
+  nav.tabs button.active .n { color: var(--accent); }
+
+  main { min-width: 0; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  h2.panel-title { font-size: 17px; margin: 0 0 4px; font-weight: 700; }
+  p.panel-desc { color: var(--text-2); font-size: 13.5px; margin: 0 0 18px; max-width: 68ch; }
+
+  input[type=text], input[type=number], select {
+    font-family: var(--sans); font-size: 14.5px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: 8px; padding: 9px 12px; outline: none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+  input[type=text]::placeholder { color: var(--text-3); }
+
+  .search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .search-row input { flex: 1; }
+
+  /* ---- 표 조회 ---- */
+  .anchor-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow);
+  }
+  .anchor-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; cursor: pointer; }
+  .anchor-title { font-weight: 600; font-size: 15px; }
+  .anchor-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .yr-badge {
+    font-family: var(--mono); font-size: 12px; border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 8px; color: var(--text-2); background: var(--surface-2);
+  }
+  .yr-badge b { color: var(--text); font-weight: 600; }
+  .warn-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px;
+    background: var(--warn-weak); color: var(--warn); border-radius: 6px;
+    padding: 5px 9px; margin-top: 8px; font-weight: 500;
+  }
+  .anchor-body { display: none; margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px; }
+  .anchor-body.open { display: block; }
+  .table-year-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .table-year-tabs button {
+    all: unset; cursor: pointer; font-family: var(--mono); font-size: 12.5px;
+    padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .table-year-tabs button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .no-year { color: var(--text-3); font-size: 12.5px; font-style: italic; padding: 4px 0; }
+
+  /* rendered table-kv block */
+  .kv { font-size: 13.8px; }
+  .kv h3 { font-size: 14.5px; margin: 0 0 8px; }
+  .kv .meta-line { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+  .kv hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .kv .grade-block h4 {
+    font-size: 13.5px; margin: 4px 0 6px; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .grade-pill {
+    font-family: var(--mono); font-weight: 700; font-size: 12px; border-radius: 6px;
+    padding: 2px 8px; display: inline-block;
+  }
+  .grade-a, .grade-b { background: var(--good-weak); color: var(--good); }
+  .grade-c { background: var(--warn-weak); color: var(--warn); }
+  .grade-d, .grade-e { background: var(--bad-weak); color: var(--bad); }
+  .kv-row { display: flex; gap: 6px; padding: 2px 0; }
+  .kv-row .k { color: var(--text-3); min-width: 74px; flex-shrink: 0; }
+  .kv-row .v { color: var(--text); }
+  .kv-crit { color: var(--text-2); padding: 1px 0 1px 4px; }
+
+  /* ---- 등급 판정 ---- */
+  .grade-form {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: end;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; box-shadow: var(--shadow); margin-bottom: 18px;
+  }
+  @media (max-width: 720px) { .grade-form { grid-template-columns: 1fr 1fr; } }
+  .field label { display: block; font-size: 11.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+  .field select, .field input { width: 100%; }
+  .go-btn {
+    all: unset; cursor: pointer; background: var(--accent); color: var(--accent-ink);
+    border-radius: 8px; padding: 9px 14px; text-align: center; font-weight: 600; font-size: 14px;
+  }
+  .go-btn:hover { filter: brightness(1.06); }
+
+  .result-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .result-empty { color: var(--text-3); font-size: 13.5px; padding: 6px 2px; }
+  .result-grade-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .result-grade-row .grade-pill { font-size: 20px; padding: 6px 16px; border-radius: 10px; }
+  .result-member { font-size: 14px; color: var(--text-2); }
+  .result-quote {
+    font-family: var(--mono); font-size: 13px; background: var(--surface-2);
+    border-left: 3px solid var(--accent); padding: 10px 12px; border-radius: 0 6px 6px 0;
+    margin: 8px 0; color: var(--text);
+  }
+  .result-source { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+  .no-match-hint { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+
+  .qual-list { margin-top: 4px; }
+  .qual-list summary {
+    cursor: pointer; font-size: 13px; color: var(--text-2); padding: 6px 0;
+  }
+  .qual-item { font-size: 13px; padding: 6px 0; border-top: 1px dashed var(--border); }
+  .qual-item .g { font-family: var(--mono); font-weight: 700; margin-right: 6px; }
+
+  /* ---- 본문 검색 ---- */
+  .hit {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 13px 15px; margin-bottom: 9px; box-shadow: var(--shadow);
+  }
+  .hit-path { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); margin-bottom: 6px; }
+  .hit-text { font-size: 14px; }
+  .hit-text mark { background: var(--warn-weak); color: var(--text); border-radius: 3px; padding: 0 2px; }
+  .hit-ref {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono);
+    font-size: 12px; color: var(--accent); background: var(--accent-weak);
+    border-radius: 6px; padding: 3px 8px; margin-top: 8px; cursor: pointer;
+  }
+  .hit-ref:hover { filter: brightness(1.05); }
+
+  .empty-state { color: var(--text-3); font-size: 13.5px; padding: 30px 4px; text-align: center; }
+  .count-line { font-size: 12.5px; color: var(--text-3); margin-bottom: 10px; font-family: var(--mono); }
+
+  footer.foot {
+    margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-3); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="brand">
+        <h1>교량 지침서 가이드</h1>
+        <span class="tag">bridge-guide</span>
+      </div>
+      <p class="sub">시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편) 교량편 — 표 조회 · 등급 판정 · 본문 검색을 연도별로 비교합니다.</p>
+    </div>
+    <div class="years" id="yearChips">
+      <span class="label">연도</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="tabs" id="tabs">
+      <button data-tab="anchor" class="active">표 조회 <span class="n">Table</span></button>
+      <button data-tab="grade">등급 판정 <span class="n">Grade</span></button>
+      <button data-tab="search">본문 검색 <span class="n">Search</span></button>
+    </nav>
+
+    <main>
+      <section class="panel active" id="panel-anchor">
+        <h2 class="panel-title">표 조회</h2>
+        <p class="panel-desc">표 번호("1.31") 또는 제목 일부("부재별 가중치")로 찾습니다. 같은 번호가 연도마다 다른 표를 가리키면 경고가 붙습니다 — 표 번호는 개정 때마다 밀립니다.</p>
+        <div class="search-row">
+          <input type="text" id="anchorQuery" placeholder="예: 1.31, 콘크리트 바닥판, 균열률" autocomplete="off">
+        </div>
+        <div class="count-line" id="anchorCount"></div>
+        <div id="anchorResults"></div>
+      </section>
+
+      <section class="panel" id="panel-grade">
+        <h2 class="panel-title">등급 판정</h2>
+        <p class="panel-desc">부재와 지표를 고르고 실측값을 넣으면, 해당 연도판 판정규칙표를 대조해 등급과 원문 근거를 보여줍니다. 계산은 코드가 하고, 저는 값을 지어내지 않습니다.</p>
+        <div class="grade-form">
+          <div class="field">
+            <label>연도</label>
+            <select id="gYear"></select>
+          </div>
+          <div class="field">
+            <label>부재</label>
+            <select id="gMember"></select>
+          </div>
+          <div class="field">
+            <label>지표</label>
+            <select id="gIndicator"></select>
+          </div>
+          <div class="field">
+            <label>실측값</label>
+            <input type="number" id="gValue" step="any" placeholder="예: 0.6">
+          </div>
+        </div>
+        <button class="go-btn" id="gGoWrap" style="margin-bottom:16px;display:inline-block;width:auto;padding:9px 22px;">판정하기</button>
+        <div id="gradeResult"></div>
+      </section>
+
+      <section class="panel" id="panel-search">
+        <h2 class="panel-title">본문 검색</h2>
+        <p class="panel-desc">절 본문 문단을 검색합니다. "표참조" 칩을 누르면 해당 표를 표 조회 탭에서 바로 엽니다.</p>
+        <div class="search-row">
+          <input type="text" id="bodyQuery" placeholder="예: 중대한 결함, 세굴, 선택과업" autocomplete="off">
+        </div>
+        <div class="count-line" id="bodyCount"></div>
+        <div id="bodyResults"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="foot">
+    <span>데이터: 2022 · 2023 · 2024 · 2026년판 「안전점검·진단 편」 교량편 (표 · 본문 · 판정규칙)</span>
+    <span>등급은 코드가 판정규칙표를 대조해 계산합니다. 서술형(정성) 기준은 참고용이며 최종 판단은 점검자의 몫입니다.</span>
+  </footer>
+</div>
+
+<script id="bridge-data" type="application/json">/*__BRIDGE_DATA__*/{}</script>
+<script>
+(function(){
+  "use strict";
+  var DATA = JSON.parse(document.getElementById('bridge-data').textContent);
+  var YEARS = DATA.연도목록.slice().sort();
+  var selectedYears = new Set(YEARS);
+
+  // ---------------- 연도 칩 ----------------
+  var yearChipsEl = document.getElementById('yearChips');
+  YEARS.forEach(function(y){
+    var b = document.createElement('button');
+    b.className = 'year-chip on';
+    b.textContent = y;
+    b.dataset.year = y;
+    b.addEventListener('click', function(){
+      if (selectedYears.has(y)) {
+        if (selectedYears.size > 1) { selectedYears.delete(y); b.classList.remove('on'); }
+      } else {
+        selectedYears.add(y); b.classList.add('on');
+      }
+      runAnchorSearch(); runBodySearch();
+    });
+    yearChipsEl.appendChild(b);
+  });
+
+  // ---------------- 탭 전환 ----------------
+  document.querySelectorAll('#tabs button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('#tabs button').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  function openTab(name){
+    document.querySelectorAll('#tabs button').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+name); });
+  }
+
+  function esc(s){
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function squash(s){ return (s||'').replace(/[\s:：·・]+/g,''); }
+
+  // ---------------- 표 KV 마크다운 미니 렌더러 ----------------
+  function renderKv(md){
+    var lines = md.split('\n');
+    var out = [];
+    var i = 0;
+    while (i < lines.length) {
+      var line = lines[i];
+      if (line.startsWith('# ')) {
+        out.push('<h3>' + esc(line.slice(2)) + '</h3>');
+      } else if (/^(문서|판본|절|표|면|부재|평가항목수|표종류):/.test(line)) {
+        out.push('<div class="meta-line">' + esc(line) + '</div>');
+      } else if (line === '평가항목:') {
+        var items = [];
+        i++;
+        while (i < lines.length && lines[i].startsWith('- ')) { items.push(lines[i].slice(2)); i++; }
+        i--;
+        out.push('<div class="meta-line">평가항목: ' + items.map(esc).join(' / ') + '</div>');
+      } else if (line === '---') {
+        out.push('<hr>');
+      } else if (line.startsWith('## ')) {
+        var head = line.slice(3);
+        var gm = head.match(/^([a-e])등급/);
+        if (gm) {
+          out.push('<div class="grade-block"><h4><span class="grade-pill grade-' + gm[1] + '">' + gm[1].toUpperCase() + '</span> ' + esc(head.replace(/^[a-e]등급\s*·\s*/, '')) + '</h4>');
+        } else {
+          out.push('<h4>' + esc(head) + '</h4>');
+        }
+      } else if (/^(부재|평가항목|세부항목|등급):\s*/.test(line)) {
+        var m = line.match(/^([^:]+):\s*(.*)$/);
+        out.push('<div class="kv-row"><span class="k">' + esc(m[1]) + '</span><span class="v">' + esc(m[2]) + '</span></div>');
+      } else if (line.startsWith('기준: ')) {
+        out.push('<div class="kv-crit">· ' + esc(line.slice(4)) + '</div>');
+      } else if (line.startsWith('출처: ')) {
+        out.push('<div class="meta-line">출처: ' + esc(line.slice(4)) + '</div>');
+      } else if (/^[^:]+:\s/.test(line) && line.length < 120) {
+        var m2 = line.match(/^([^:]+):\s*(.*)$/);
+        out.push('<div class="kv-row"><span class="k">' + esc(m2[1]) + '</span><span class="v">' + esc(m2[2]) + '</span></div>');
+      } else if (line.trim() !== '') {
+        out.push('<div class="kv-crit">' + esc(line) + '</div>');
+      }
+      i++;
+    }
+    return '<div class="kv">' + out.join('') + '</div>';
+  }
+
+  // ---------------- 표 조회 ----------------
+  var anchorEntries = Object.keys(DATA.표).map(function(k){
+    var e = DATA.표[k]; e._key = k; return e;
+  });
+
+  function renderAnchorCard(entry){
+    var years = Object.keys(entry.연도별).filter(function(y){ return selectedYears.has(y); }).sort();
+    if (!years.length) return null;
+
+    var badges = years.map(function(y){
+      var d = entry.연도별[y];
+      return '<span class="yr-badge">' + y + ' <b>' + (d.번호 ? '표' + d.번호 : '무번호') + '</b></span>';
+    }).join('');
+
+    var card = document.createElement('div');
+    card.className = 'anchor-card';
+    var id = 'anc-' + entry._key.replace(/[^a-zA-Z0-9가-힣]/g, '');
+    card.innerHTML =
+      '<div class="anchor-head" data-toggle="' + id + '">' +
+        '<div class="anchor-title">' + esc(entry.제목) + '</div>' +
+      '</div>' +
+      '<div class="anchor-badges">' + badges + '</div>' +
+      '<div class="anchor-body" id="' + id + '"></div>';
+
+    var body = card.querySelector('.anchor-body');
+    var tabWrap = document.createElement('div');
+    tabWrap.className = 'table-year-tabs';
+    var content = document.createElement('div');
+    var activeYear = years[years.length - 1];
+
+    function showYear(y){
+      activeYear = y;
+      tabWrap.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.y === y); });
+      content.innerHTML = renderKv(entry.연도별[y].내용);
+    }
+    years.forEach(function(y){
+      var b = document.createElement('button');
+      b.textContent = y; b.dataset.y = y;
+      b.addEventListener('click', function(){ showYear(y); });
+      tabWrap.appendChild(b);
+    });
+    body.appendChild(tabWrap);
+    body.appendChild(content);
+    showYear(activeYear);
+
+    card.querySelector('.anchor-head').addEventListener('click', function(){
+      body.classList.toggle('open');
+    });
+
+    return card;
+  }
+
+  // 번호 -> {연도: 제목} 역색인 (경고 배지용)
+  var numberIndex = {};
+  anchorEntries.forEach(function(entry){
+    Object.keys(entry.연도별).forEach(function(y){
+      var no = entry.연도별[y].번호;
+      if (!no) return;
+      numberIndex[no] = numberIndex[no] || {};
+      numberIndex[no][y] = entry.제목;
+    });
+  });
+
+  function numberWarningHtml(entry, years){
+    var msgs = [];
+    years.forEach(function(y){
+      var no = entry.연도별[y].번호;
+      if (!no) return;
+      var others = numberIndex[no];
+      var distinctTitles = new Set(Object.values(others));
+      if (distinctTitles.size > 1) {
+        var parts = Object.keys(others).sort().map(function(yy){ return yy + '=' + others[yy]; });
+        msgs.push('표' + no + ' — ' + parts.join(' / '));
+      }
+    });
+    if (!msgs.length) return '';
+    var uniq = Array.from(new Set(msgs));
+    return '<div class="warn-badge">⚠ 같은 번호가 연도마다 다른 표를 가리킵니다: ' + esc(uniq.join(' · ')) + '</div>';
+  }
+
+  function runAnchorSearch(){
+    var q = squash(document.getElementById('anchorQuery').value);
+    var results = anchorEntries.filter(function(e){
+      var years = Object.keys(e.연도별).filter(function(y){ return selectedYears.has(y); });
+      if (!years.length) return false;
+      if (!q) return true;
+      var titleHit = squash(e.제목).indexOf(q) !== -1;
+      var numHit = years.some(function(y){ return e.연도별[y].번호 && e.연도별[y].번호.replace(/\./g,'') === q.replace(/\./g,''); });
+      return titleHit || numHit;
+    });
+    results.sort(function(a,b){ return a.제목.localeCompare(b.제목, 'ko'); });
+
+    var wrap = document.getElementById('anchorResults');
+    wrap.innerHTML = '';
+    document.getElementById('anchorCount').textContent = results.length + '개 표 (선택 연도: ' + Array.from(selectedYears).sort().join(', ') + ')';
+    if (!results.length) {
+      wrap.innerHTML = '<div class="empty-state">일치하는 표가 없습니다.</div>';
+      return;
+    }
+    results.slice(0, 60).forEach(function(entry){
+      var years = Object.keys(entry.연도별).filter(function(y){ return selectedYears.has(y); }).sort();
+      var card = renderAnchorCard(entry);
+      if (!card) return;
+      var warnHtml = numberWarningHtml(entry, years);
+      if (warnHtml) {
+        var d = document.createElement('div');
+        d.innerHTML = warnHtml;
+        card.insertBefore(d.firstChild, card.querySelector('.anchor-body'));
+      }
+      wrap.appendChild(card);
+    });
+  }
+
+  document.getElementById('anchorQuery').addEventListener('input', runAnchorSearch);
+
+  window.__openAnchorFromRef = function(refText){
+    var m = refText.match(/^표(\d+\.\d+(?:의\d+)?)\s+(.+)$/) || refText.match(/^표_(.+)$/);
+    var titleGuess = m ? (m[2] || m[1]) : refText;
+    openTab('anchor');
+    document.getElementById('anchorQuery').value = titleGuess.replace(/-\d+$/, '');
+    runAnchorSearch();
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  // ---------------- 등급 판정 ----------------
+  var gYear = document.getElementById('gYear');
+  var gMember = document.getElementById('gMember');
+  var gIndicator = document.getElementById('gIndicator');
+  var gValue = document.getElementById('gValue');
+
+  YEARS.forEach(function(y){
+    var o = document.createElement('option'); o.value = y; o.textContent = y + '년판'; gYear.appendChild(o);
+  });
+  gYear.value = YEARS[YEARS.length-1];
+
+  function numericRulesFor(year){
+    return (DATA.판정규칙[year] || []).filter(function(r){ return r.연산 !== '정성' && r.지표; });
+  }
+  function allRulesFor(year){ return DATA.판정규칙[year] || []; }
+
+  function refreshMembers(){
+    var rules = numericRulesFor(gYear.value);
+    var members = Array.from(new Set(rules.map(function(r){ return r.부재; }))).sort(function(a,b){return a.localeCompare(b,'ko');});
+    gMember.innerHTML = '';
+    members.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; gMember.appendChild(o); });
+    refreshIndicators();
+  }
+  function refreshIndicators(){
+    var rules = numericRulesFor(gYear.value).filter(function(r){ return r.부재 === gMember.value; });
+    var inds = Array.from(new Set(rules.map(function(r){ return r.지표; }))).sort(function(a,b){return a.localeCompare(b,'ko');});
+    gIndicator.innerHTML = '';
+    inds.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; gIndicator.appendChild(o); });
+  }
+  gYear.addEventListener('change', refreshMembers);
+  gMember.addEventListener('change', refreshIndicators);
+  refreshMembers();
+
+  function satisfies(r, v){
+    switch(r.연산){
+      case '구간':
+        var lo = r.최소포함 ? v >= r.최소 : v > r.최소;
+        var hi = r.최대포함 ? v <= r.최대 : v < r.최대;
+        return lo && hi;
+      case '미만': return v < r.값;
+      case '이하': return v <= r.값;
+      case '초과': return v > r.값;
+      case '이상': return v >= r.값;
+    }
+    return false;
+  }
+
+  function gradeBadgeHtml(g){
+    return '<span class="grade-pill grade-' + g + '">' + g.toUpperCase() + '</span>';
+  }
+
+  function runGrade(){
+    var year = gYear.value, member = gMember.value, indicator = gIndicator.value;
+    var v = parseFloat(gValue.value);
+    var out = document.getElementById('gradeResult');
+    out.innerHTML = '';
+
+    var card = document.createElement('div');
+    card.className = 'result-card';
+
+    if (isNaN(v)) {
+      card.innerHTML = '<div class="result-empty">실측값을 입력하세요.</div>';
+      out.appendChild(card);
+      return;
+    }
+
+    var candidates = numericRulesFor(year).filter(function(r){ return r.부재===member && r.지표===indicator; });
+    var hit = candidates.find(function(r){ return satisfies(r, v); });
+
+    if (hit) {
+      card.innerHTML =
+        '<div class="result-grade-row">' + gradeBadgeHtml(hit.등급) +
+          '<span class="result-member">' + esc(member) + ' · ' + esc(indicator) + ' = ' + v + (hit.단위||'') + '</span></div>' +
+        '<div class="result-quote">' + esc(hit.원문) + '</div>' +
+        '<div class="result-source">근거: ' + year + '년판 [표 ' + esc(hit.표||'') + '] ' + (hit.면?hit.면+'면':'') + '</div>';
+    } else if (candidates.length) {
+      card.innerHTML = '<div class="result-empty">해당 값에 맞는 수치 구간을 찾지 못했습니다.</div>' +
+        '<div class="no-match-hint">참고용 후보 ' + candidates.length + '건: ' + candidates.map(function(r){return esc(r.원문);}).join(' / ') + '</div>';
+    } else {
+      card.innerHTML = '<div class="result-empty">이 부재·지표 조합의 수치 판정규칙이 없습니다.</div>';
+    }
+    out.appendChild(card);
+
+    var quals = allRulesFor(year).filter(function(r){ return r.연산==='정성' && r.부재===member; });
+    if (quals.length) {
+      var det = document.createElement('details');
+      det.className = 'qual-list';
+      det.innerHTML = '<summary>참고: ' + esc(member) + '의 정성(서술형) 기준 ' + quals.length + '건 — 점검자 판단 필요</summary>';
+      quals.forEach(function(r){
+        var d = document.createElement('div');
+        d.className = 'qual-item';
+        d.innerHTML = '<span class="g">' + r.등급.toUpperCase() + '</span>' + esc(r.원문);
+        det.appendChild(d);
+      });
+      out.appendChild(det);
+    }
+  }
+  document.getElementById('gGoWrap').addEventListener('click', runGrade);
+
+  // ---------------- 본문 검색 ----------------
+  function highlight(text, q){
+    if (!q) return esc(text);
+    var idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return esc(text);
+    return esc(text.slice(0,idx)) + '<mark>' + esc(text.slice(idx, idx+q.length)) + '</mark>' + esc(text.slice(idx+q.length));
+  }
+
+  function runBodySearch(){
+    var q = document.getElementById('bodyQuery').value.trim();
+    var wrap = document.getElementById('bodyResults');
+    wrap.innerHTML = '';
+    if (!q) {
+      document.getElementById('bodyCount').textContent = '';
+      wrap.innerHTML = '<div class="empty-state">검색어를 입력하세요.</div>';
+      return;
+    }
+    var hits = [];
+    Array.from(selectedYears).sort().forEach(function(year){
+      (DATA.본문[year]||[]).forEach(function(sec){
+        sec.내용.split('\n').forEach(function(line){
+          var content = null;
+          if (line.startsWith('내용: ')) content = line.slice(4);
+          else if (/^#{2,5} /.test(line)) content = line.replace(/^#{2,5} /,'');
+          if (content && content.toLowerCase().indexOf(q.toLowerCase()) !== -1) {
+            hits.push({year: year, section: sec.절, text: content});
+          }
+        });
+        sec.내용.split('\n').forEach(function(line){
+          if (line.startsWith('표참조: ') && line.toLowerCase().indexOf(q.toLowerCase()) !== -1) {
+            hits.push({year: year, section: sec.절, text: line, isRef: true});
+          }
+        });
+      });
+    });
+    document.getElementById('bodyCount').textContent = hits.length + '건';
+    if (!hits.length) { wrap.innerHTML = '<div class="empty-state">일치하는 본문이 없습니다.</div>'; return; }
+    hits.slice(0,80).forEach(function(h){
+      var el = document.createElement('div');
+      el.className = 'hit';
+      var refHtml = '';
+      if (h.isRef) {
+        var refTxt = h.text.replace('표참조: ', '');
+        refHtml = '<div class="hit-ref" data-ref="' + esc(refTxt) + '">📎 표 열기: ' + esc(refTxt) + '</div>';
+        el.innerHTML = '<div class="hit-path">' + h.year + ' · ' + esc(h.section) + '</div>' + refHtml;
+      } else {
+        el.innerHTML = '<div class="hit-path">' + h.year + ' · ' + esc(h.section) + '</div>' +
+          '<div class="hit-text">' + highlight(h.text, q) + '</div>';
+      }
+      wrap.appendChild(el);
+    });
+    wrap.querySelectorAll('.hit-ref').forEach(function(b){
+      b.addEventListener('click', function(){ window.__openAnchorFromRef(b.dataset.ref); });
+    });
+  }
+  document.getElementById('bodyQuery').addEventListener('input', runBodySearch);
+
+  // ---------------- 초기 상태 ----------------
+  runAnchorSearch();
+
+  // ---------------- 로컬 실행 시 URL 파라미터로 자동 검색 ----------------
+  // /bridge-guide 질문 처리기가 file:///.../bridge_guide.html?tab=search&q=세굴 처럼
+  // 열면 그 탭·질의로 바로 시작한다. 인터넷 없이 로컬 파일로 열 때도 그대로 동작한다.
+  try {
+    var params = new URLSearchParams(location.search);
+    var qp = params.get('q');
+    var tabp = params.get('tab');
+    if (tabp === 'grade') {
+      openTab('grade');
+    } else if (qp) {
+      openTab(tabp === 'search' ? 'search' : 'anchor');
+      if (tabp === 'search') {
+        document.getElementById('bodyQuery').value = qp;
+        runBodySearch();
+      } else {
+        document.getElementById('anchorQuery').value = qp;
+        runAnchorSearch();
+      }
+    }
+  } catch (e) { /* file:// 에서 URLSearchParams가 막히면 그냥 기본 화면으로 연다 */ }
+})();
+</script>
