@@ -13,3 +13,6 @@ knowledge/*.idx
 api_key.txt
 .env
 config.local.toml
+
+# Artifact 빌드 산출물 (게시할 때만 만든다)
+webapp/bridge_guide.artifact.html
