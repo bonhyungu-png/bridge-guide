@@ -177,8 +177,12 @@ def _group_lines(page, layout: Layout, x0: float, x1: float) -> list:
     return lines
 
 
-def _read_printed_no(page, x0: float, x1: float) -> str | None:
-    """하단에 인쇄된 면번호를 읽는다."""
+def read_printed_no(page, x0: float, x1: float) -> str | None:
+    """하단에 인쇄된 면번호를 읽는다.
+
+    01_문서골격/02_표추출처럼 원본 pdfplumber 페이지를 직접 다루는 다른
+    스크립트도 같은 규칙으로 인쇄 면번호를 읽어야 하므로 공개 함수로 둔다.
+    """
     h = page.height
     try:
         band = page.crop((x0, h * 0.93, x1, h))
@@ -192,6 +196,22 @@ def _read_printed_no(page, x0: float, x1: float) -> str | None:
     return None
 
 
+# 하위 호환 별칭 - logical_pages 안에서 계속 쓰인다
+_read_printed_no = read_printed_no
+
+
+def page_blocks(layout: Layout, page_width: float) -> list:
+    """물리 페이지 한 장을 논리 쪽 구간으로 나눈다.
+
+    1-up이면 [(None, 0, width)] 하나, 2-up이면 좌/우 두 구간.
+    01_문서골격/02_표추출이 원본 페이지를 직접 크롭할 때 이 경계를 그대로 쓴다.
+    """
+    if layout.up == 1:
+        return [(None, 0.0, page_width)]
+    half = page_width / 2
+    return [("L", 0.0, half), ("R", half, page_width)]
+
+
 def logical_pages(year: str, limit_physical: int | None = None) -> list:
     """물리 페이지를 논리 페이지로 펼쳐 읽기 순서대로 돌려준다.
 
@@ -203,13 +223,7 @@ def logical_pages(year: str, limit_physical: int | None = None) -> list:
     with pdfplumber.open(pdf_path(year)) as pdf:
         pages = pdf.pages[:limit_physical] if limit_physical else pdf.pages
         for physical, page in enumerate(pages, 1):
-            if layout.up == 1:
-                blocks = [(None, 0.0, page.width)]
-            else:
-                half = page.width / 2
-                blocks = [("L", 0.0, half), ("R", half, page.width)]
-
-            for side, x0, x1 in blocks:
+            for side, x0, x1 in page_blocks(layout, page.width):
                 out.append(LogicalPage(
                     year=year,
                     physical=physical,
