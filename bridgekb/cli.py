@@ -114,7 +114,9 @@ def main(argv=None) -> int:
     result = args.func(args)
     json.dump(result, sys.stdout, ensure_ascii=False, indent=2, default=str)
     sys.stdout.write("\n")
-    return 0 if result.get("status") in ("ok", "not_found") else 1
+    # 조회 결과가 없거나 지식이 덜 빌드된 것은 도구의 실패가 아니다.
+    # 종료코드 1은 도구 자체가 못 돌았을 때만 쓴다 - 그래야 셸 체이닝이 끊기지 않는다.
+    return 0
 
 
 if __name__ == "__main__":
