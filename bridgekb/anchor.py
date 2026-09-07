@@ -27,29 +27,40 @@ def _squash(text: str) -> str:
 def _scan() -> dict:
     """정본의 표 파일을 전부 훑어 앵커 색인을 만든다.
 
+    표 파일은 data/파생/본문표/{판본_접두}@{연도}/*.md에 판본별로 모여 있다
+    (섹션별로 나뉘어 있지 않다 - 한 판본 안에서는 표 번호가 유일하므로 안전하다).
+
     반환: {앵커키: {"제목": str, "연도별": {연도: {"번호": str|None, "경로": Path}}}}
     """
     index: dict[str, dict] = defaultdict(lambda: {"제목": "", "연도별": {}})
+    접두 = config.판본_접두 + "@"
 
-    for table_file in sorted(config.DATA_DIR.glob("*/table/*/*.md")):
-        year = table_file.parent.name
-        stem = table_file.stem
-
-        m = NUMBERED.match(stem)
-        if m:
-            title, number = m.group("title").strip(), m.group("no")
-        else:
-            m = UNNUMBERED.match(stem)
-            if not m:
-                continue
-            title, number = m.group("title").strip(), None
-
-        key = _squash(title)
-        entry = index[key]
-        entry["제목"] = entry["제목"] or title
-        entry["연도별"][year] = {"번호": number, "경로": table_file}
+    for 판본폴더 in sorted(config.TABLE_DIR.glob(f"{config.판본_접두}@*")):
+        if not 판본폴더.is_dir() or not 판본폴더.name.startswith(접두):
+            continue
+        year = 판본폴더.name[len(접두):]
+        for table_file in sorted(판본폴더.glob("*.md")):
+            _index_table(index, table_file, year)
 
     return dict(index)
+
+
+def _index_table(index: dict, table_file: Path, year: str) -> None:
+    stem = table_file.stem
+
+    m = NUMBERED.match(stem)
+    if m:
+        title, number = m.group("title").strip(), m.group("no")
+    else:
+        m = UNNUMBERED.match(stem)
+        if not m:
+            return
+        title, number = m.group("title").strip(), None
+
+    key = _squash(title)
+    entry = index[key]
+    entry["제목"] = entry["제목"] or title
+    entry["연도별"][year] = {"번호": number, "경로": table_file}
 
 
 _INDEX: dict | None = None
