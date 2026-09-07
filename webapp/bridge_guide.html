@@ -1160,8 +1160,52 @@
     // 탭을 자동으로 옮기지 않는다 - 옮기면 방금 띄운 설명을 사용자가 못 본다.
   }
 
+  // 엔진을 구하는 길이 둘이다.
+  //  1) 로컬 서버(서버.py) - 터미널과 **같은 엔진**(claude -p)을 쓴다. 도구는
+  //     서버 쪽 bridgekb가 실행한다. 어디서 열든 켜진다.
+  //  2) Artifact 뷰어 - 보는 사람의 Claude를 빌린다. 도구는 이 페이지의 JS가
+  //     실행한다. claude.ai 뷰어 안에서만 켜진다.
+  // 어느 쪽이든 도구 명세와 판정 규칙은 같으므로 답도 같아야 한다.
+
+  async function localEngine(){
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return null;
+    try {
+      var probe = await fetch('_engine', { cache: 'no-store' });
+      if (!probe.ok) return null;
+      var info = await probe.json();
+      if (!info || !info.ok) return null;
+    } catch (e) { return null; }
+
+    // sampleFn과 같은 모양으로 감싼다: (turns, opts) -> {text}
+    return function(input, opts){
+      // input[0]은 ask()가 붙인 RULES 턴이다. 서버가 같은 규칙을 시스템
+      // 프롬프트로 넣으므로 여기서는 뺀다.
+      var turns = input.slice(1);
+      return fetch('ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turns: turns }),
+        signal: opts && opts.signal
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.error) throw { code: d.code || 'upstream_error', message: d.error };
+        return { text: d.text };
+      }).catch(function(e){
+        if (e && e.name === 'AbortError') throw { code: 'cancelled', message: '중지' };
+        throw e;
+      });
+    };
+  }
+
   (async function initAsk(){
     try {
+      var local = await localEngine();
+      if (local) {
+        sampleFn = local;
+        toolsOk = true;             // 도구는 서버 쪽에서 돈다
+        chatHint.textContent = '로컬 서버에 연결됨 — 터미널과 같은 엔진으로 답합니다.';
+        return;
+      }
+
       if (!window.claude || !window.claude.use) { disableAsk('복사본'); return; }
       var s = await window.claude.use('sample');
       // 아티팩트 자체 호스트에서 최상위로 열리면 window.claude는 있어도
