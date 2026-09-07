@@ -1,0 +1,15 @@
+# 조회 엔진 (필수)
+rank-bm25
+
+# 웹 UI (선택)
+fastapi
+uvicorn
+
+# API 프로바이더 (선택 - 쓰는 것만 설치)
+# anthropic
+# google-genai
+# openai
+# ollama
+
+# 개발
+pytest

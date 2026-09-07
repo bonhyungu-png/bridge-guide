@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+
+# 빌드 산출물 중 대용량 인덱스는 커밋하지 않는다
+knowledge/*.idx
+
+# API 키는 절대 커밋하지 않는다
+api_key.txt
+.env
+config.local.toml
