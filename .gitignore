@@ -15,6 +15,10 @@ api_key.txt
 .env
 config.local.toml
 
+# 빌드 중간 산출물 - webapp/bridge_guide.html 안에 이미 들어가 있다.
+# 필요하면 python build/20_아티팩트_데이터.py 로 다시 만든다.
+build/artifact_data.json
+
 # Artifact 빌드 산출물 (게시할 때만 만든다)
 webapp/bridge_guide.artifact.html
 

@@ -13,7 +13,7 @@
 지침서를 못 찾아서가 아니라, 찾아 읽고도 다르게 판정하기 때문이다.
 
 이 저장소는 그 변동성을 줄이는 것을 목표로 한다. 실제 정본 데이터를 진단해 보면
-다음과 같은 문제가 측정된다 (`python build/00_validate.py`):
+다음과 같은 문제가 측정된다:
 
 | 문제 | 실측 |
 |---|---|
@@ -265,16 +265,13 @@ bridge-guide/
 ├── examples/             순수 API로 붙이는 최소 예제
 ├── data/                 ★ 정본·파생 + 원본pdf (번들 - 외부 폴더에 의존하지 않는다)
 ├── webapp/               웹 GUI (템플릿.html + 빌드된 bridge_guide.html)
-├── index.html            GitHub Pages 진입점
 ├── build/                빌드 파이프라인
-│   ├── 00_validate.py         진단
 │   ├── 16_출처페이지매핑.py     표 -> 실제 PDF 쪽 찾기
 │   ├── 17_페이지값_보정.py      찾은 쪽을 데이터에 박기
 │   ├── 20_아티팩트_데이터.py    웹앱용 데이터 번들
 │   ├── 21_웹앱_빌드.py         단일 파일 웹앱 조립
 │   └── 30_지침_동기화.py       SKILL.md -> CLAUDE/GEMINI/AGENTS.md
-├── knowledge/            빌드 산출물 (손으로 고치지 않음)
-└── docs/design.md        설계 문서
+└── knowledge/            표 -> PDF 쪽 지도 (빌드 산출물)
 ```
 
 ---
@@ -283,7 +280,7 @@ bridge-guide/
 
 - [x] **Phase 0** 진단 — 참조 무결성·지표명 품질 측정
 - [x] 플러그인 골격 · 환경 어댑터 · `anchor` 도구
-- [x] **Phase 1** 정본 통일 — 신버전 파서를 2022~2024에 소급, 4개 판본 일치 (잔여 4건은 계획 문서 참조)
+- [x] **Phase 1** 정본 통일 — 신버전 파서를 2022~2024에 소급, 4개 판본 일치
 - [ ] **Phase 2** 지식 빌드 (개념 사전 · 양방향 참조 · 법령 수집 · BM25)
 - [x] **Phase 3** `grade` `search` + MCP 도구 6개 — `concept` `compare` `law`는 Phase 2 대기
 - [x] **Phase 4** 웹 GUI · MCP 서버 · 답 아래 원본 PDF 쪽 출처

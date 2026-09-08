@@ -22,7 +22,6 @@ NOT_BUILT = {
 def cmd_doctor(_args) -> dict:
     """지식베이스 상태 점검 - 무엇이 준비됐고 무엇이 빠졌는지."""
     years = config.available_years()
-    report = config.REPORT_DIR / "phase0.json"
 
     checks = {
         "정본 데이터": {
@@ -33,10 +32,6 @@ def cmd_doctor(_args) -> dict:
         "판정규칙": {
             "경로": str(config.RULES_PATH),
             "존재": config.RULES_PATH.exists(),
-        },
-        "Phase0 진단": {
-            "경로": str(report),
-            "존재": report.exists(),
         },
         "개념 사전": {
             "경로": str(config.KNOWLEDGE_DIR / "concepts.json"),
@@ -54,17 +49,6 @@ def cmd_doctor(_args) -> dict:
     result = {"status": "ok" if not missing else "incomplete",
               "준비됨": ready, "빠짐": missing, "상세": checks}
 
-    if report.exists():
-        data = json.loads(report.read_text(encoding="utf-8"))
-        result["진단요약"] = {
-            "표참조_정확도": data["표참조"]["정확도"],
-            "표참조_깨짐": data["표참조"]["깨짐"],
-            "지표명_오염": data["지표명"]["오염"],
-            "법령참조_종류": len(data["법령참조"]),
-            "표번호밀림": len(data["표번호밀림"]),
-        }
-    if missing:
-        result["다음단계"] = "python build/00_validate.py 를 실행해 진단 리포트를 만드세요."
     return result
 
 
