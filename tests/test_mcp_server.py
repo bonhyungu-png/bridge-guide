@@ -83,7 +83,7 @@ def test_등급판정이_stdio를_건너와도_그대로다():
     body = payload_of(msgs[9])
     assert body["grade"] == "b"
     assert body["quote"].startswith("균열폭"), "한글이 깨지면 여기서 드러난다"
-    assert body["source"] == {"table": "1.11", "page": "1-27"}
+    assert body["source"] == {"table": "1.11", "page": 29}
 
 
 def test_알림에는_응답하지_않는다():

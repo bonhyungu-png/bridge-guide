@@ -1,15 +1,17 @@
-# 조회 엔진 (필수)
-rank-bm25
+# 조회·질의응답만 할 거면 아무것도 설치하지 않아도 된다.
+#   python -m bridgekb grade "콘크리트 바닥판" 균열폭 0.25
+#   python bridge_mcp.py            (MCP 서버)
+#   python 서버.py                   (웹 화면 + 질문하기)
+# 위 셋은 파이썬 3.10 이상이면 표준 라이브러리만으로 돈다.
 
-# 웹 UI (선택)
-fastapi
-uvicorn
+# 답 아래 "출처"에 원본 PDF 쪽을 그림으로 띄우려면 필요하다.
+# (없으면 답은 그대로 나오고 출처 그림만 안 뜬다. build/1x 스크립트에도 쓰인다.)
+pdfplumber
 
-# API 프로바이더 (선택 - 쓰는 것만 설치)
-# anthropic
-# google-genai
-# openai
-# ollama
+# API 키로 직접 물을 때만 - 쓰는 것 하나만 설치하면 된다.
+# anthropic          # ANTHROPIC_API_KEY
+# google-genai       # GEMINI_API_KEY
+# openai             # OPENAI_API_KEY
 
 # 개발
 pytest

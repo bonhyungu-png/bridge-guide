@@ -100,6 +100,35 @@ def cmd_stub(name):
     return _run
 
 
+def cmd_engines(_args) -> dict:
+    from . import engines
+
+    found = engines.available()
+    return {
+        "기본": found[0].name if found else None,
+        "쓸수있음": [{"이름": e.name, "방식": e.kind, "설명": e.detail} for e in found],
+        "안내": ("없으면 claude/gemini/codex 중 하나를 설치하거나 "
+                "ANTHROPIC_API_KEY · GEMINI_API_KEY · OPENAI_API_KEY 중 하나를 넣으세요."),
+    }
+
+
+def cmd_ask(args) -> dict:
+    """자연어 질문. 등급은 여전히 코드가 판정하고, AI는 문장으로 옮기기만 한다."""
+    from . import engines
+
+    try:
+        answer = engines.ask([{"role": "user", "content": args.question}], args.engine)
+    except engines.EngineError as exc:
+        return {"오류": exc.message, "코드": exc.code}
+
+    out = {"엔진": answer.engine, "답": answer.text}
+    if answer.sources:
+        out["출처"] = answer.sources
+    if answer.warning:
+        out["경고"] = answer.warning
+    return out
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog="bridgekb",
@@ -129,6 +158,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("mcp", help="MCP 서버를 stdio로 실행 (AI 도구에 등록해 쓴다)")
     p.set_defaults(func=cmd_mcp)
+
+    p = sub.add_parser("engines", help="이 컴퓨터에서 질문에 쓸 수 있는 AI 목록")
+    p.set_defaults(func=cmd_engines)
+
+    p = sub.add_parser("ask", help="자연어로 묻는다 (쓸 수 있는 AI를 자동으로 고른다)")
+    p.add_argument("question", help='예: "콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?"')
+    p.add_argument("--engine", default=None, help="엔진을 직접 고른다 (engines 로 목록 확인)")
+    p.set_defaults(func=cmd_ask)
 
     for name, help_text in [
         ("concept", "손상 이름 -> 정식 항목·분류 (함정 경고 포함)"),

@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.benchmarks/
 .venv/
 venv/
 *.egg-info/
@@ -16,3 +17,6 @@ config.local.toml
 
 # Artifact 빌드 산출물 (게시할 때만 만든다)
 webapp/bridge_guide.artifact.html
+
+# "출처"에 쓰는 페이지 그림 - 서버가 필요할 때 렌더링해 캐시하는 것뿐이다
+data/출처페이지/

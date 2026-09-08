@@ -2,7 +2,9 @@
 
 이 프로젝트의 목표가 "환경이 달라도 같은 답"이므로, 여기서 지키는 것은
 함수가 안 죽는다는 사실이 아니라 **값이 웹앱과 같다**는 사실이다.
-기준값은 SKILL.md의 예시(균열폭 0.25mm → b등급, 표1.11, 1-27면)를 쓴다.
+기준값은 SKILL.md의 예시(균열폭 0.25mm → b등급, 표1.11, 29면)를 쓴다.
+"면"은 원본 PDF의 실제 쪽 번호다 - 답 아래 "출처"에 그 쪽을 그대로 띄우려면
+인쇄면("1-27")이 아니라 파일 안의 물리 쪽이어야 한다(build/17_페이지값_보정.py).
 """
 from __future__ import annotations
 
@@ -21,7 +23,7 @@ def test_균열폭_025는_b등급이고_출처가_붙는다():
 
     assert r["found"] is True
     assert r["grade"] == "b"
-    assert r["source"] == {"table": "1.11", "page": "1-27"}
+    assert r["source"] == {"table": "1.11", "page": 29}
     assert "0.1" in r["quote"] and "0.3" in r["quote"]
 
 

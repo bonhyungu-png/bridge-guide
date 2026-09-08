@@ -26,48 +26,63 @@
 
 ---
 
-## 쓰는 법 — 두 가지
+## 쓰는 법 — 세 가지 창구
 
-이 저장소는 **화면**과 **자유 질문**을 따로 제공한다. 둘 다 설치도 서버도 API 키도 필요 없다.
+같은 엔진(`bridgekb`)을 세 가지 창구가 나눠 쓴다. 창만 다르고 답은 같다.
+설치할 것은 파이썬 3.10 이상뿐이고, **특정 회사 도구에 매이지 않는다.**
 
-### 1. 화면 — 웹 GUI
+| 창구 | 무엇이 필요한가 | 언제 쓰나 |
+|---|---|---|
+| **웹 화면** (`서버.py`) | 이 컴퓨터의 AI 하나 (아래 참고) | 사람이 직접 물어볼 때 |
+| **MCP 서버** (`bridge_mcp.py`) | MCP를 지원하는 AI 도구 | 이미 쓰는 AI에 붙일 때 |
+| **CLI / 파이썬** (`python -m bridgekb`) | 없음 | 스크립트·자동화 |
 
-`webapp/bridge_guide.html` **한 파일**에 4개 판본의 표·본문·판정규칙이 전부 들어 있다.
-브라우저로 열기만 하면 인터넷 없이도 그대로 돈다.
-
-- **표 조회** — 번호나 제목으로 찾고, 연도별 번호 밀림을 배지로 경고한다
-- **등급 판정** — 부재·지표·값을 넣으면 페이지 안의 코드가 구간을 대조해 등급·원문·출처를 보여준다
-- **본문 검색** — 문단을 찾고, `표참조:` 칩을 눌러 해당 표를 바로 편다
-
-```bash
-python build/20_아티팩트_데이터.py   # 데이터가 바뀌었을 때만
-python build/21_웹앱_빌드.py         # webapp/bridge_guide.html 재생성
-```
-
-### 1-2. 화면에서 질문하기 — 로컬 서버
-
-`webapp/bridge_guide.html`을 파일로 열면 「질문하기」 탭이 꺼져 있다. 그 페이지에는
-Claude로 가는 통로가 없기 때문이다. **터미널의 엔진을 그대로 붙이면** 켜진다:
+### 1. 웹 화면 — 물어보고, 근거가 된 PDF 쪽을 눈으로 본다
 
 ```bash
 python 서버.py
 ```
 
-http://127.0.0.1:8765 이 열리고, 그 화면에서 자유롭게 물으면 된다.
+http://127.0.0.1:8765 이 열린다. 질문을 넣으면 왼쪽에 질문 목록이 쌓이고,
+가운데에 답이 뜬다. 답 아래 **출처**에는 그 답이 인용한 표가 실제로 실린
+**원본 PDF 쪽을 잘라낸 그림**이 나열된다 — 누르면 크게 볼 수 있고
+Ctrl+휠로 확대·축소된다.
 
 ```
-브라우저 질문 → 서버.py → claude -p → bridge-guide MCP 도구 6개 → 답
+브라우저 질문 → 서버.py → engines.ask() → 도구 6개 → 답 + 인용한 PDF 쪽
 ```
 
-`claude -p`는 **이미 로그인된 Claude Code 구독을 그대로 쓴다** — API 키가 없고,
-표준 라이브러리만 쓰므로 설치할 것도 없다. 127.0.0.1에만 묶이고, 도구는
-지침서를 읽는 6개만 허용한다(셸·파일 쓰기 없음).
+**엔진은 이 컴퓨터에 있는 것을 자동으로 고른다.** 무엇이 잡히는지 확인:
 
-한 질문에 20~35초쯤 걸린다. 답에는 등급·근거 원문·출처(연도판·표번호·면)가 붙는다.
+```bash
+python 서버.py --engines
+```
 
-> Claude Code가 없는 사람에게 줄 때는 Artifact 링크를 쓴다. 그쪽은 보는 사람의
-> Claude를 빌리므로 설치가 필요 없지만, **claude.ai 뷰어 안에서** 열어야 켜진다
-> (주소를 새 탭에 붙여넣으면 꺼진 채로 열린다).
+| 엔진 | 필요한 것 | 비고 |
+|---|---|---|
+| `claude-cli` | Claude Code 설치·로그인 | 도구 호출 내역을 정확히 읽는다 |
+| `gemini-cli` | Gemini CLI 설치·로그인 | MCP 등록 필요 (아래) |
+| `codex-cli` | Codex CLI 설치·로그인 | MCP 등록 필요 (아래) |
+| `anthropic-api` | `ANTHROPIC_API_KEY` | 도구 루프를 서버가 직접 돈다 |
+| `gemini-api` | `GEMINI_API_KEY` | 〃 |
+| `openai-api` | `OPENAI_API_KEY` | 〃 |
+
+CLI 엔진은 **이미 낸 구독을 그대로 쓴다**(API 키·추가 요금 없음). API 엔진은
+키에 요금이 붙지만 도구 호출을 서버가 직접 돌리므로 출처가 가장 정확하다.
+직접 고르려면 `python 서버.py --engine gemini-cli` 또는 환경변수
+`BRIDGE_GUIDE_ENGINE`.
+
+> 출처 그림에는 `pdfplumber`와 `data/원본pdf/*.pdf`가 필요하다.
+> 없으면 답은 그대로 나오고 그림만 안 뜬다.
+
+### 1-2. 터미널에서 바로 묻기
+
+화면 없이도 같은 답을 받는다. 엔진 선택 규칙도 같다.
+
+```bash
+python -m bridgekb ask "콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?"
+python -m bridgekb engines        # 쓸 수 있는 AI 목록
+```
 
 ### 2. 자유 질문 — MCP 서버
 
@@ -189,7 +204,7 @@ $ python -m bridgekb grade "콘크리트 바닥판" 균열폭 0.25
   "year": "2026",
   "grade": "b",
   "quote": "균열폭 0.1㎜이상～0.3㎜미만",
-  "source": { "table": "1.11", "page": "1-27" }
+  "source": { "table": "1.11", "page": 29 }
 }
 ```
 
@@ -215,9 +230,14 @@ $ python -m bridgekb anchor "1.31"
    LLM이 직접 수치를 비교해 등급을 정하지 않는다. 비용 때문이 아니라 **재현성** 때문이다.
 2. **출처 없는 사실 문장을 쓰지 않는다.** 모든 답에 (연도, 표번호, 면수)를 붙인다.
 3. **정본은 하나.** PDF → 정본 → 지식(빌드 산출물). 파생물을 손으로 고치지 않는다.
-4. **내용은 한 곳, 어댑터는 얇게.** 행동 지침은 `skills/bridge-guide/SKILL.md`에만 있고,
-   `CLAUDE.md` · `GEMINI.md` · `AGENTS.md`는 그 파일을 가리키는 한 줄이다.
+4. **지침은 한 곳에서 쓰고, 도구마다 복사해 둔다.** 원본은
+   `skills/bridge-guide/SKILL.md` 하나뿐이고 `CLAUDE.md` · `GEMINI.md` ·
+   `AGENTS.md`는 거기서 생성한다(`python build/30_지침_동기화.py`).
+   `@경로` 한 줄 포인터로 두면 그 문법을 모르는 도구(Codex·Cursor·순수 API)에서는
+   지침이 통째로 없는 것과 같아지기 때문이다. 어긋나면 테스트가 먼저 깨진다.
 5. **어느 창에서 물어도 같은 답.** 모든 경로가 `bridgekb` 한 엔진을 부른다.
+6. **AI 회사에 매이지 않는다.** 질문을 보낼 AI는 `bridgekb/engines.py`가 고른다 —
+   Claude Code · Gemini CLI · Codex CLI · 세 공급사 API 중 있는 것을 쓴다.
 
 ---
 
@@ -225,28 +245,35 @@ $ python -m bridgekb anchor "1.31"
 
 ```
 bridge-guide/
-├── .claude-plugin/       Claude Code 플러그인 매니페스트
-├── commands/             /bridge-guide 슬래시 커맨드
 ├── skills/bridge-guide/  ★ 행동 지침 (유일한 원본)
+├── CLAUDE.md GEMINI.md AGENTS.md   위에서 생성 (build/30) - 도구별로 읽는 파일
+├── .cursor/rules/        Cursor 규칙
+├── .claude-plugin/ .codex-plugin/ gemini-extension.json   도구별 매니페스트
+├── commands/             /bridge-guide 슬래시 커맨드 (Claude Code)
 ├── bridge_mcp.py         MCP 진입점 (어느 폴더에서 실행해도 됨)
 ├── .mcp.json             이 저장소를 열었을 때의 자동 등록
 ├── bridgekb/             ★ 조회 엔진 - LLM을 모른다
 │   ├── anchor.py         표 조회 (연도 밀림 흡수)
 │   ├── kb.py             판정규칙·본문 적재, 이름 맞추기
 │   ├── tools.py          ★ 도구 6개 - MCP·CLI·웹앱이 공유하는 유일한 구현
+│   ├── engines.py        ★ 질문을 보낼 AI 고르기 (CLI 3종 · API 3종)
 │   ├── mcp_server.py     MCP stdio 서버 (의존성 없음)
-│   ├── cli.py            모든 환경의 단일 진입점
-│   └── providers/        API 어댑터 (교체 가능)
-├── data/                 ★ 정본·파생 (번들 - 외부 폴더에 의존하지 않는다)
+│   ├── pdfnorm.py        원본 PDF 좌표계 맞추기
+│   └── cli.py            모든 환경의 단일 진입점
+├── 서버.py                웹 화면 + /ask + 출처 PDF 쪽 렌더링
+├── 열기.py                서버를 띄우고 브라우저로 연다
+├── examples/             순수 API로 붙이는 최소 예제
+├── data/                 ★ 정본·파생 + 원본pdf (번들 - 외부 폴더에 의존하지 않는다)
 ├── webapp/               웹 GUI (템플릿.html + 빌드된 bridge_guide.html)
 ├── index.html            GitHub Pages 진입점
-├── build/                지식 빌드 파이프라인
-│   ├── 00_validate.py    Phase 0 진단
-│   ├── 20_아티팩트_데이터.py  웹앱용 데이터 번들
-│   └── 21_웹앱_빌드.py    단일 파일 웹앱 조립
+├── build/                빌드 파이프라인
+│   ├── 00_validate.py         진단
+│   ├── 16_출처페이지매핑.py     표 -> 실제 PDF 쪽 찾기
+│   ├── 17_페이지값_보정.py      찾은 쪽을 데이터에 박기
+│   ├── 20_아티팩트_데이터.py    웹앱용 데이터 번들
+│   ├── 21_웹앱_빌드.py         단일 파일 웹앱 조립
+│   └── 30_지침_동기화.py       SKILL.md -> CLAUDE/GEMINI/AGENTS.md
 ├── knowledge/            빌드 산출물 (손으로 고치지 않음)
-│   └── _report/          진단 리포트
-├── CLAUDE.md GEMINI.md AGENTS.md    한 줄 포인터
 └── docs/design.md        설계 문서
 ```
 
@@ -259,7 +286,8 @@ bridge-guide/
 - [x] **Phase 1** 정본 통일 — 신버전 파서를 2022~2024에 소급, 4개 판본 일치 (잔여 4건은 계획 문서 참조)
 - [ ] **Phase 2** 지식 빌드 (개념 사전 · 양방향 참조 · 법령 수집 · BM25)
 - [x] **Phase 3** `grade` `search` + MCP 도구 6개 — `concept` `compare` `law`는 Phase 2 대기
-- [x] **Phase 4** 웹 GUI · MCP 서버 — GitHub Pages 배포만 남음
+- [x] **Phase 4** 웹 GUI · MCP 서버 · 답 아래 원본 PDF 쪽 출처
+- [x] **Phase 4-2** 엔진 다중화 — Claude Code 외 Gemini·Codex·API로도 질문
 - [ ] **Phase 5** 골든셋 검증 · 환경 간 답변 일치 테스트
 
 ## 라이선스
