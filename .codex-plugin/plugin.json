@@ -1,6 +1,6 @@
 {
   "name": "bridge-guide",
   "description": "한국 교량 안전점검 지침서 질의응답",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "contextFile": "AGENTS.md"
 }

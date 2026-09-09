@@ -162,6 +162,25 @@ def sources_from_tool_result(name: str, payload: dict) -> list:
     return out
 
 
+# MCP 도구 이름은 이 도구를 "어떻게 붙였는지"에 따라 달라진다. 같은 grade_lookup 인데
+#   프로젝트 .mcp.json / claude mcp add  ->  mcp__bridge-guide__grade_lookup
+#   플러그인 설치                        ->  mcp__plugin_bridge-guide_bridge-guide__grade_lookup
+# 예전에는 앞의 것만 --allowedTools 에 넣어서, 플러그인으로 설치한 컴퓨터에서는
+# 도구가 통째로 권한 거부됐다(permission_denials). 답은 나오는데 등급을 코드가
+# 판정하지 못하고 출처도 비는 상태였다. 그래서 알려진 접두사를 전부 넣는다.
+MCP_PREFIXES = (
+    "mcp__bridge-guide__",
+    "mcp__plugin_bridge-guide_bridge-guide__",
+)
+
+
+def allowed_tool_names() -> list:
+    """--allowedTools 에 넘길 이름들. 붙인 방식이 무엇이든 걸리도록 전부 준다."""
+    return [prefix + spec["name"]
+            for prefix in MCP_PREFIXES
+            for spec in tools.SPECS]
+
+
 # ---------------------------------------------------------------- 엔진 공통
 
 class Engine:
@@ -211,7 +230,7 @@ class ClaudeCli(Engine):
         self.exe = exe
 
     def ask(self, turns: list) -> Answer:
-        allowed = ["mcp__bridge-guide__" + s["name"] for s in tools.SPECS]
+        allowed = allowed_tool_names()
         out, err = _run([
             self.exe, "-p", flatten(turns),
             "--output-format", "stream-json", "--verbose",
@@ -245,9 +264,16 @@ class ClaudeCli(Engine):
         denials = result.get("permission_denials")
         if denials:
             # 도구가 막히면 등급을 코드가 판정하지 못한 채 답이 나온다 - 숨기면 안 된다.
-            warning = "허용되지 않은 도구 호출이 %d건 있었습니다." % len(denials)
+            names = sorted({d.get("tool_name", "") for d in denials if isinstance(d, dict)})
+            warning = ("허용되지 않은 도구 호출이 %d건 있었습니다(%s). 등급이 코드로 "
+                       "판정되지 않았을 수 있습니다." % (len(denials), ", ".join(names)))
 
         sources = _sources_from_stream(lines) or sources_from_text(text)
+        if not warning and not sources and re.search(r"\b[a-e]\s*등급", text):
+            # 등급을 말하면서 출처가 하나도 없다 = 도구를 안 거쳤다는 뜻이다.
+            # 예전에 이 경우가 아무 표시 없이 지나가서 원인을 늦게 찾았다.
+            warning = ("도구 호출 내역을 찾지 못했습니다. bridge-guide 가 이 컴퓨터에 "
+                       "MCP로 붙어 있는지 확인하세요(claude mcp list).")
         return Answer(text=text, sources=sources, warning=warning, engine=self.name)
 
 
@@ -259,10 +285,16 @@ def _sources_from_stream(lines: list) -> list:
             d = json.loads(raw.strip())
         except (json.JSONDecodeError, ValueError):
             continue
-        content = (d.get("message") or {}).get("content")
+        # 권한 안내 줄은 message 가 dict 가 아니라 문자열이다("...but you haven't
+        # granted it yet."). 그대로 .get 을 부르면 AttributeError 로 죽어서 출처가
+        # 통째로 사라진다 - 실제로 그렇게 터졌다. 모양이 다른 줄은 건너뛴다.
+        message = d.get("message")
+        content = message.get("content") if isinstance(message, dict) else None
         if not isinstance(content, list):
             continue
         for block in content:
+            if not isinstance(block, dict):
+                continue
             if block.get("type") == "tool_use":
                 names[block.get("id")] = block.get("name")
                 continue
@@ -273,7 +305,7 @@ def _sources_from_stream(lines: list) -> list:
             text = None
             if isinstance(body, list):
                 for item in body:
-                    if item.get("type") == "text":
+                    if isinstance(item, dict) and item.get("type") == "text":
                         text = item.get("text")
                         break
             elif isinstance(body, str):
