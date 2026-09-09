@@ -21,7 +21,9 @@
 
 ## 설치
 
-파이썬 3.10 이상만 있으면 된다. 그 외 필수 의존성은 없다.
+파이썬 3.10 이상과 답할 AI 하나가 있으면 된다.
+새 컴퓨터에서 준비할 것은 아래 **[설치가 필요한 것](#설치가-필요한-것)**에
+표로 정리해 두었다.
 
 ### Claude Code (권장)
 
@@ -214,6 +216,104 @@ bridge-guide/
 │   └── 17_페이지값_보정.py      찾은 쪽을 데이터에 박기
 └── tests/                pytest
 ```
+
+---
+
+## 설치가 필요한 것
+
+새 컴퓨터에서 준비할 것을 한곳에 모았다.
+
+| | 무엇 | 필수? | 없으면 |
+|---|---|---|---|
+| 1 | **파이썬 3.10 이상** | 필수 | 아무것도 안 된다 |
+| 2 | **답할 AI** — Claude Code 로그인 **또는** API 키 하나 | 필수 | 화면은 뜨지만 「질문하기」가 꺼진다 |
+| 3 | **pdfplumber** | 선택 | 답과 출처 글자는 나오고, 원본 PDF 쪽 **그림만** 안 뜬다 |
+| 4 | **Git** | 저장소를 직접 받을 때만 | 플러그인으로 설치하면 필요 없다 |
+| 5 | **pytest** | 개발할 때만 | 테스트만 못 돌린다 |
+
+### 1. 파이썬
+
+[python.org](https://www.python.org/downloads/)에서 3.10 이상. 설치할 때
+**Add Python to PATH**를 켜야 한다.
+
+```bash
+python --version
+```
+
+### 2. 답할 AI (둘 중 하나)
+
+**Claude Code** — 이미 낸 구독을 그대로 쓴다. 추가 요금 없음. *(권장)*
+
+설치 방법은 [claude.com/claude-code](https://claude.com/claude-code)를 따른다.
+설치한 뒤 `claude` 를 한 번 실행해 로그인해 두면 된다. 확인:
+
+```bash
+claude --version
+```
+
+이 저장소를 Claude Code 플러그인으로 설치해 쓰고 있다면 이미 갖춰진 것이다.
+
+**또는 API 키** — Claude Code가 없을 때. 키에 요금이 붙는다.
+아래 셋 중 **하나만** 고르고, 그 줄의 환경변수와 패키지를 함께 준비한다.
+
+| 쓸 것 | 환경변수 | 함께 설치 |
+|---|---|---|
+| Anthropic | `ANTHROPIC_API_KEY` | `pip install anthropic` |
+| Gemini | `GEMINI_API_KEY` | `pip install google-genai` |
+| OpenAI | `OPENAI_API_KEY` | `pip install openai` |
+
+환경변수 넣는 법:
+
+```bash
+setx ANTHROPIC_API_KEY "sk-..."
+```
+
+맥·리눅스는 `export ANTHROPIC_API_KEY="sk-..."` 를 `~/.zshrc` 등에 넣는다.
+윈도우는 `setx` 실행 후 **터미널을 닫았다 새로 열어야** 반영된다.
+
+### 3. pdfplumber — 답 아래 원본 PDF 쪽 그림
+
+```bash
+pip install pdfplumber
+```
+
+**플러그인으로 설치해도 이건 자동으로 깔리지 않는다.** 새 컴퓨터마다 한 번씩
+직접 실행해야 한다. 없어도 답과 출처(연도판·표번호·면)는 그대로 나오고,
+그 쪽을 그림으로 깔아 주는 것만 빠진다.
+
+### 4. Git — 저장소를 직접 받을 때만
+
+플러그인(`/plugin install`)으로 쓰면 필요 없다. `git clone` 을 쓸 때만:
+
+```bash
+winget install --id Git.Git -e --source winget
+```
+
+맥은 터미널에서 `git --version` 을 치면 설치 창이 뜬다.
+
+### 다 됐는지 한 번에 확인
+
+```bash
+python 서버.py --doctor
+```
+
+```
+정본 데이터 : ...\data\파생\본문표
+  판본      : 2022, 2023, 2024, 2026
+  2022 판정규칙: 있음
+  2023 판정규칙: 있음
+  2024 판정규칙: 있음
+  2026 판정규칙: 있음
+웹 화면     : 있음
+원본 PDF    : 있음
+출처 그림   : 됩니다                      ← 없으면 "안 됩니다" (3번)
+답할 AI     : claude-cli (기본: claude-cli) ← 없으면 "없음" (2번)
+
+준비됐습니다.
+```
+
+마지막 줄이 `준비됐습니다.` 면 다 된 것이다. 아니면 「없음」·「안 됩니다」로
+나온 줄만 위에서 찾아 채우면 된다.
 
 ---
 
