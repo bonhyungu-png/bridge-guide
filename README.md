@@ -43,7 +43,32 @@
 - **Windows**: 시작 메뉴 → `PowerShell` 검색 → 클릭
 - **Mac**: `Cmd+Space` → `터미널` 검색 → 엔터
 
-뜬 창(검은/파란 화면)에 아래 두 줄을 그대로 입력하고 매 줄 엔터:
+그 창에 `git --version`을 쳐 본다. `'git'은 내부 또는 외부 명령...`처럼
+못 찾는다는 안내가 뜨면 Git이 없는 것이니 먼저 설치한다.
+
+**Windows — 터미널 명령으로 설치 (먼저 시도)**
+
+```bash
+winget install --id Git.Git -e --source winget
+```
+
+설치가 끝나면 **그 터미널 창을 닫았다가 새로 열어야** PATH가 반영된다.
+새 창에서 `git --version`으로 확인.
+
+`winget`도 없다는 안내가 뜨면(아주 오래된 Windows) 직접 받는다:
+[git-scm.com/download/win](https://git-scm.com/download/win) 접속 →
+자동으로 받아지는 설치 파일 실행 → 화면에 나오는 옵션은 전부
+**기본값(Next만 계속)**. 설치 끝나면 터미널을 새로 열어서 확인.
+
+**Mac**
+
+```bash
+git --version
+```
+을 치면 Xcode 커맨드라인 도구 설치 여부를 물어보는 창이 뜬다 —
+"설치"를 누르면 그걸로 Git도 같이 깔린다.
+
+Git이 준비됐으면, 그 터미널에 아래 두 줄을 그대로 입력하고 매 줄 엔터:
 
 ```bash
 git clone https://github.com/bonhyungu-png/bridge-guide.git
