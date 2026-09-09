@@ -14,6 +14,8 @@ AI는 이 컴퓨터에 이미 있는 것을 빌려 쓴다(`bridgekb/engines.py`)
 
 사용:
     python 서버.py                       # 열고 브라우저를 띄운다
+    python 서버.py --launch              # 뒤에서 띄우고 화면만 열고 끝낸다
+                                        #   (/bridge-guide 커맨드가 쓰는 길)
     python 서버.py --port 9000
     python 서버.py --no-open             # 브라우저를 자동으로 열지 않는다
     python 서버.py --engine anthropic-api # 엔진을 직접 고른다
@@ -25,14 +27,16 @@ from __future__ import annotations
 import argparse
 import json
 import socket
+import subprocess
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -258,6 +262,66 @@ def _free(port: int) -> bool:
         return s.connect_ex(("127.0.0.1", port)) != 0
 
 
+def _spawn_detached(port: int) -> bool:
+    """서버를 뒤에서 띄우고, 응답할 때까지 기다린다.
+
+    슬래시 커맨드(`/bridge-guide`)는 명령이 끝나야 대화가 이어진다. 그런데
+    serve_forever()는 끝나지 않으므로, 화면을 여는 쪽과 서버를 도는 쪽을
+    분리한다 - 띄운 뒤 이 프로세스는 빠진다.
+    """
+    kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL,
+              "stdin": subprocess.DEVNULL, "cwd": str(ROOT)}
+    if sys.platform == "win32":
+        # 이 프로세스가 끝나도 서버는 살아 있어야 한다. 콘솔 창도 띄우지 않는다.
+        kwargs["creationflags"] = (subprocess.CREATE_NO_WINDOW
+                                   | subprocess.DETACHED_PROCESS)
+    else:
+        kwargs["start_new_session"] = True
+
+    cmd = [sys.executable, str(Path(__file__).resolve()),
+           "--port", str(port), "--no-open"]
+    if ENGINE_NAME:
+        cmd += ["--engine", ENGINE_NAME]
+    try:
+        subprocess.Popen(cmd, **kwargs)
+    except OSError:
+        return False
+
+    deadline = time.time() + 20
+    while time.time() < deadline:
+        if _running_here(port):
+            return True
+        time.sleep(0.4)
+    return False
+
+
+def launch(question: str) -> int:
+    """화면을 연다. 서버가 없으면 뒤에서 띄운다. 슬래시 커맨드가 쓰는 길이다."""
+    base = None
+    for port in PORTS:
+        if _running_here(port):
+            base = "http://127.0.0.1:%d/" % port
+            break
+    if base is None:
+        for port in PORTS:
+            if _free(port) and _spawn_detached(port):
+                base = "http://127.0.0.1:%d/" % port
+                break
+    if base is None:
+        print("서버를 띄우지 못했습니다. 이 폴더에서 python 서버.py 를 직접 실행해 보세요.",
+              file=sys.stderr)
+        return 1
+
+    url = base + ("?q=" + quote(question) if question.strip() else "")
+    if not webbrowser.open(url):
+        print("브라우저를 열지 못했습니다. 직접 여세요:", file=sys.stderr)
+        print(url)
+        return 1
+    print("교량 지침서 가이드를 열었습니다. 화면에 그냥 물어보면 됩니다.")
+    print(url)
+    return 0
+
+
 def main(argv=None) -> int:
     global ENGINE_NAME, PORT
 
@@ -268,10 +332,17 @@ def main(argv=None) -> int:
                     help="쓸 엔진 이름. 생략하면 자동으로 고른다 (--engines 로 목록 확인)")
     ap.add_argument("--engines", action="store_true", help="쓸 수 있는 AI를 보여주고 끝낸다")
     ap.add_argument("--doctor", action="store_true", help="지식베이스·엔진 상태 점검")
+    ap.add_argument("--launch", action="store_true",
+                    help="화면만 열고 끝낸다(서버가 없으면 뒤에서 띄운다). 슬래시 커맨드용")
+    ap.add_argument("question", nargs="*", help="열면서 바로 물어볼 질문(선택)")
     args = ap.parse_args(argv)
 
     if args.doctor:
         return doctor()
+
+    if args.launch:
+        ENGINE_NAME = args.engine
+        return launch(" ".join(args.question))
 
     if args.engines:
         found = engines.available()

@@ -1,0 +1,21 @@
+{
+  "name": "bridge-guide",
+  "displayName": "교량 지침서 가이드",
+  "version": "0.5.0",
+  "description": "「시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편) 교량편」 질의응답. /bridge-guide 로 웹 화면을 열면 등급 판정·연도별 개정 추적·근거 원문을 출처와 함께 답한다.",
+  "author": {
+    "name": "BMS 연구팀"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bridge",
+    "inspection",
+    "korea",
+    "safety",
+    "guideline",
+    "교량",
+    "안전점검"
+  ],
+  "homepage": "https://github.com/bonhyungu-png/bridge-guide",
+  "repository": "https://github.com/bonhyungu-png/bridge-guide"
+}
