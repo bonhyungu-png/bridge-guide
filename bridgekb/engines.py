@@ -1,33 +1,28 @@
 # -*- coding: utf-8 -*-
-"""질문 엔진 - 어떤 AI로 묻든 같은 규칙, 같은 도구, 같은 모양의 답을 받는다.
+"""질문 엔진 - 웹 화면이 빌려 쓸 AI를 고르고, 같은 모양의 답을 돌려준다.
 
-이 저장소의 조회 엔진(`bridgekb`)은 AI를 모른다. 등급은 파이썬이 판정하고
-AI는 그 결과를 문장으로 옮길 뿐이다. 그런데 그 "AI를 부르는 방법"은 사람마다
-다르다 - Claude Code를 쓰는 사람, Gemini CLI를 쓰는 사람, API 키만 있는 사람.
-
-그래서 부르는 방법을 여기 한 곳에 모으고, 바깥(서버·CLI)에는 하나의 모양만 준다:
+질문을 받고 답하는 곳은 웹 하나뿐이다(`서버.py`). 이 모듈은 그 서버가
+"답을 만들 AI"를 어디서 빌려올지만 정한다. 바깥에 주는 모양은 하나다:
 
     ask(turns) -> Answer(text, sources, warning)
 
-## 두 갈래
+## 어떤 AI를 빌리나
 
-**CLI 엔진** (`claude` `gemini` `codex`)
-  이미 로그인된 구독을 그대로 쓴다. API 키도, 추가 요금도 없다.
-  도구는 그 CLI에 등록된 MCP 서버(bridge_mcp.py)가 제공한다 - 등록이
-  안 돼 있으면 도구 없이 답하게 되므로, 그 경우를 감지해 경고를 붙인다.
+**claude-cli** (기본)
+  이미 로그인된 Claude Code 구독을 그대로 쓴다. API 키도 추가 요금도 없다.
+  도구는 우리가 `--mcp-config`로 **직접 물려서** 준다 - 사용자가 MCP를
+  등록해 둘 필요가 없고, 등록해 뒀더라도 `--strict-mcp-config`로 다른
+  서버를 배제해 항상 같은 조건에서 답한다.
 
 **API 엔진** (anthropic / gemini / openai)
-  키가 있으면 이쪽을 쓸 수 있다. 도구 호출 루프를 **여기서 직접 돌리므로**
-  어떤 도구가 무엇을 돌려줬는지 정확히 안다 - 출처가 가장 정확한 경로다.
+  키가 있으면 쓸 수 있다. 도구 호출 루프를 여기서 직접 돌리므로 어떤 도구가
+  무엇을 돌려줬는지 정확히 안다.
 
-## 출처를 얻는 방법이 엔진마다 다르다
+## 왜 gemini-cli · codex-cli 를 뺐나
 
-답 아래에 원본 PDF 쪽을 띄우려면 (연도, 표번호, 면)이 필요하다.
-
-  - API 엔진, claude CLI: 도구 호출 결과에서 그대로 뽑는다 (정확)
-  - gemini/codex CLI: 도구 내역을 볼 수 없으므로 답 텍스트에서 표 번호를
-    찾고, 면은 모델 말이 아니라 **우리 데이터에서** 조회한다 (모델이 면수를
-    잘못 적어도 올바른 쪽이 나온다)
+그 CLI들은 도구 호출 내역을 돌려주지 않아서, 도구를 실제로 썼는지 확인할
+방법이 없었다. 등급을 코드가 판정했는지 모델이 눈대중으로 비교했는지
+구분되지 않는 답은 이 프로젝트에서 쓸 수 없다 - 그래서 지웠다.
 """
 from __future__ import annotations
 
@@ -37,13 +32,17 @@ import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from . import kb, tools
 
 TIMEOUT_SEC = 180
 
-# 웹 화면 안에서 부를 때 붙이는 규칙. SKILL.md의 0단계("먼저 GUI를 연다")가
-# 여기서는 이미 GUI 안이라 무의미하고, 그대로 두면 답 대신 승인 요청이 온다.
+ROOT = Path(__file__).resolve().parent.parent
+MCP_ENTRY = ROOT / "bridge_mcp.py"
+
+# 이 호출은 이미 질의 화면 안에서 일어난 것이다. 그대로 두면 모델이 답 대신
+# "GUI를 열까요?"라고 되묻는다.
 EXTRA_RULES = """
 이 호출은 화면에 표시할 텍스트 답을 만드는 것이다. 이미 질의 화면 안에서
 물어본 것이므로 브라우저나 GUI를 열지 마라. 셸을 쓰지 말고 bridge-guide 도구만
@@ -57,6 +56,7 @@ class Answer:
     """엔진이 무엇이든 바깥은 이 모양만 본다."""
     text: str
     sources: list = field(default_factory=list)   # [{year, table, page}]
+    tools_used: list = field(default_factory=list)  # 화면에 "무엇으로 판정했는지" 보여준다
     warning: str | None = None
     engine: str = ""
 
@@ -73,7 +73,7 @@ class EngineError(Exception):
 # ---------------------------------------------------------------- 프롬프트
 
 def flatten(turns: list) -> str:
-    """대화를 한 덩어리 프롬프트로 만든다. CLI들은 턴 목록을 받지 않는다."""
+    """대화를 한 덩어리 프롬프트로 만든다. CLI는 턴 목록을 받지 않는다."""
     if not turns:
         return ""
     *before, last = turns
@@ -95,7 +95,7 @@ def system_rules() -> str:
 
 # ---------------------------------------------------------------- 출처
 
-_TABLE_IN_TEXT = re.compile(r"(20\d\d)\s*년판[^\n]{0,40}?표\s*(\d+\.\d+(?:의\d+)?)")
+_TABLE_IN_TEXT = re.compile(r"(20\d\d)\s*년\s*판?[^\n]{0,40}?표\s*(\d+\.\d+(?:의\d+)?)")
 
 
 def page_of(year: str, table: str):
@@ -123,7 +123,7 @@ def dedup(sources: list) -> list:
 def sources_from_text(text: str) -> list:
     """답 텍스트에서 (연도, 표번호)를 찾고 쪽 번호는 데이터에서 조회한다.
 
-    도구 호출 내역을 볼 수 없는 엔진용 폴백. 모델이 적은 면수는 믿지 않는다.
+    도구 호출 내역이 비었을 때의 폴백. 모델이 적은 면수는 믿지 않는다.
     """
     out = []
     for year, table in _TABLE_IN_TEXT.findall(text or ""):
@@ -145,7 +145,7 @@ def sources_from_tool_result(name: str, payload: dict) -> list:
     if not year:
         return []
 
-    short = name.rsplit("__", 1)[-1]   # mcp__bridge-guide__grade_lookup 도 받는다
+    short = name.rsplit("__", 1)[-1]
     out = []
     if short == "grade_lookup":
         src = payload.get("source") or {}
@@ -162,23 +162,23 @@ def sources_from_tool_result(name: str, payload: dict) -> list:
     return out
 
 
-# MCP 도구 이름은 이 도구를 "어떻게 붙였는지"에 따라 달라진다. 같은 grade_lookup 인데
-#   프로젝트 .mcp.json / claude mcp add  ->  mcp__bridge-guide__grade_lookup
-#   플러그인 설치                        ->  mcp__plugin_bridge-guide_bridge-guide__grade_lookup
-# 예전에는 앞의 것만 --allowedTools 에 넣어서, 플러그인으로 설치한 컴퓨터에서는
-# 도구가 통째로 권한 거부됐다(permission_denials). 답은 나오는데 등급을 코드가
-# 판정하지 못하고 출처도 비는 상태였다. 그래서 알려진 접두사를 전부 넣는다.
-MCP_PREFIXES = (
-    "mcp__bridge-guide__",
-    "mcp__plugin_bridge-guide_bridge-guide__",
-)
+# 우리가 `--mcp-config`로 직접 물리므로 서버 이름은 항상 이것이다.
+MCP_PREFIX = "mcp__bridge-guide__"
+
+
+def mcp_config() -> str:
+    """`claude --mcp-config`에 넘길 설정. 파일이 아니라 JSON 문자열로 준다.
+
+    사용자가 MCP를 미리 등록해 둘 필요가 없다 - 서버가 호출할 때마다 우리
+    도구를 물려 준다. 예전에는 등록을 사용자에게 맡겨서, 안 돼 있으면 도구
+    없이 답이 나왔고 그걸 알아채기도 어려웠다.
+    """
+    return json.dumps({"mcpServers": {"bridge-guide": {
+        "command": "python", "args": [str(MCP_ENTRY)]}}})
 
 
 def allowed_tool_names() -> list:
-    """--allowedTools 에 넘길 이름들. 붙인 방식이 무엇이든 걸리도록 전부 준다."""
-    return [prefix + spec["name"]
-            for prefix in MCP_PREFIXES
-            for spec in tools.SPECS]
+    return [MCP_PREFIX + spec["name"] for spec in tools.SPECS]
 
 
 # ---------------------------------------------------------------- 엔진 공통
@@ -201,40 +201,24 @@ def _run(cmd: list) -> tuple[str, str]:
             proc.stderr.decode("utf-8", "replace").strip())
 
 
-def _plain_text_answer(out: str, err: str, engine: str) -> Answer:
-    """도구 내역을 볼 수 없는 CLI들의 공통 마무리 - 텍스트에서 출처를 되찾는다."""
-    text = out or err
-    if not text:
-        raise EngineError("빈 답이 돌아왔습니다.", "empty_completion")
-    if "limit" in text.lower() and len(text) < 400:
-        raise EngineError(text[:400], "rate_limited")
-
-    sources = sources_from_text(text)
-    warning = None
-    if not sources and re.search(r"\b[a-e]\s*등급", text):
-        warning = ("도구를 썼는지 확인할 수 없었습니다. "
-                   "bridge_mcp.py 를 이 도구에 MCP로 등록했는지 확인하세요.")
-    return Answer(text=text, sources=sources, warning=warning, engine=engine)
-
-
 # ---------------------------------------------------------------- CLI 엔진
 
 class ClaudeCli(Engine):
-    """Claude Code. 유일하게 도구 호출 내역(stream-json)을 그대로 볼 수 있다."""
+    """Claude Code 구독을 빌린다. 도구는 우리가 직접 물려 준다."""
 
     name = "claude-cli"
     kind = "cli"
-    detail = "Claude Code 구독을 그대로 쓴다 (API 키 없음)"
+    detail = "Claude Code 구독을 그대로 쓴다 (API 키 없음, 별도 설정 없음)"
 
     def __init__(self, exe: str):
         self.exe = exe
 
     def ask(self, turns: list) -> Answer:
-        allowed = allowed_tool_names()
         out, err = _run([
             self.exe, "-p", flatten(turns),
             "--output-format", "stream-json", "--verbose",
-            "--allowedTools", " ".join(allowed),
+            "--strict-mcp-config", "--mcp-config", mcp_config(),
+            "--allowedTools", " ".join(allowed_tool_names()),
             "--append-system-prompt", system_rules(),
         ])
 
@@ -268,26 +252,27 @@ class ClaudeCli(Engine):
             warning = ("허용되지 않은 도구 호출이 %d건 있었습니다(%s). 등급이 코드로 "
                        "판정되지 않았을 수 있습니다." % (len(denials), ", ".join(names)))
 
-        sources = _sources_from_stream(lines) or sources_from_text(text)
+        sources, used = _sources_from_stream(lines)
+        if not sources:
+            sources = sources_from_text(text)
         if not warning and not sources and re.search(r"\b[a-e]\s*등급", text):
             # 등급을 말하면서 출처가 하나도 없다 = 도구를 안 거쳤다는 뜻이다.
-            # 예전에 이 경우가 아무 표시 없이 지나가서 원인을 늦게 찾았다.
-            warning = ("도구 호출 내역을 찾지 못했습니다. bridge-guide 가 이 컴퓨터에 "
-                       "MCP로 붙어 있는지 확인하세요(claude mcp list).")
-        return Answer(text=text, sources=sources, warning=warning, engine=self.name)
+            warning = ("도구 호출 내역을 찾지 못했습니다. 등급이 코드로 판정되지 "
+                       "않았을 수 있습니다.")
+        return Answer(text=text, sources=sources, tools_used=used,
+                      warning=warning, engine=self.name)
 
 
-def _sources_from_stream(lines: list) -> list:
-    """stream-json 줄들에서 tool_use 이름과 tool_result 내용을 짝지어 읽는다."""
-    names, out = {}, []
+def _sources_from_stream(lines: list) -> tuple[list, list]:
+    """stream-json 줄들에서 (출처, 실제로 부른 우리 도구 이름들)을 뽑는다."""
+    names, out, used = {}, [], []
     for raw in lines:
         try:
             d = json.loads(raw.strip())
         except (json.JSONDecodeError, ValueError):
             continue
-        # 권한 안내 줄은 message 가 dict 가 아니라 문자열이다("...but you haven't
-        # granted it yet."). 그대로 .get 을 부르면 AttributeError 로 죽어서 출처가
-        # 통째로 사라진다 - 실제로 그렇게 터졌다. 모양이 다른 줄은 건너뛴다.
+        # 권한 안내 줄은 message 가 dict 가 아니라 문자열이다. 그대로 .get 을
+        # 부르면 AttributeError 로 죽어서 출처가 통째로 사라진다 - 실제로 그랬다.
         message = d.get("message")
         content = message.get("content") if isinstance(message, dict) else None
         if not isinstance(content, list):
@@ -296,7 +281,10 @@ def _sources_from_stream(lines: list) -> list:
             if not isinstance(block, dict):
                 continue
             if block.get("type") == "tool_use":
-                names[block.get("id")] = block.get("name")
+                name = block.get("name") or ""
+                names[block.get("id")] = name
+                if name.startswith(MCP_PREFIX):
+                    used.append(name[len(MCP_PREFIX):])
                 continue
             if block.get("type") != "tool_result":
                 continue
@@ -316,34 +304,7 @@ def _sources_from_stream(lines: list) -> list:
                 out += sources_from_tool_result(name, json.loads(text))
             except (json.JSONDecodeError, ValueError):
                 continue
-    return dedup(out)
-
-
-class GeminiCli(Engine):
-    name = "gemini-cli"
-    kind = "cli"
-    detail = "Gemini CLI 로그인을 그대로 쓴다 (MCP 등록 필요)"
-
-    def __init__(self, exe: str):
-        self.exe = exe
-
-    def ask(self, turns: list) -> Answer:
-        prompt = system_rules() + "\n\n---\n\n" + flatten(turns)
-        return _plain_text_answer(*_run([self.exe, "-p", prompt]), engine=self.name)
-
-
-class CodexCli(Engine):
-    name = "codex-cli"
-    kind = "cli"
-    detail = "Codex CLI 로그인을 그대로 쓴다 (MCP 등록 필요)"
-
-    def __init__(self, exe: str):
-        self.exe = exe
-
-    def ask(self, turns: list) -> Answer:
-        prompt = system_rules() + "\n\n---\n\n" + flatten(turns)
-        return _plain_text_answer(
-            *_run([self.exe, "exec", "--skip-git-repo-check", prompt]), engine=self.name)
+    return dedup(out), used
 
 
 # ---------------------------------------------------------------- API 엔진
@@ -358,14 +319,13 @@ class ApiEngine(Engine):
     env_key = ""
     default_model = ""
     model_env = ""
+    detail_base = ""
 
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.model = os.environ.get(self.model_env) or self.default_model
         self.detail = "%s (모델 %s, %s 로 바꿀 수 있음)" % (
             self.detail_base, self.model, self.model_env)
-
-    detail_base = ""
 
 
 class AnthropicApi(ApiEngine):
@@ -383,7 +343,7 @@ class AnthropicApi(ApiEngine):
                    "input_schema": s["inputSchema"]} for s in tools.SPECS]
         messages = [{"role": t.get("role", "user"), "content": str(t.get("content") or "")}
                     for t in turns]
-        collected = []
+        collected, used = [], []
 
         for _ in range(MAX_TOOL_ROUNDS):
             resp = client.messages.create(
@@ -394,12 +354,14 @@ class AnthropicApi(ApiEngine):
                 text = "".join(getattr(b, "text", "") for b in resp.content).strip()
                 if not text:
                     raise EngineError("빈 답이 돌아왔습니다.", "empty_completion")
-                return Answer(text=text, sources=dedup(collected), engine=self.name)
+                return Answer(text=text, sources=dedup(collected),
+                              tools_used=used, engine=self.name)
 
             messages.append({"role": "assistant", "content": resp.content})
             results = []
             for call in calls:
                 payload = _safe_call(call.name, dict(call.input))
+                used.append(call.name.rsplit('__', 1)[-1])
                 collected += sources_from_tool_result(call.name, payload)
                 results.append({"type": "tool_result", "tool_use_id": call.id,
                                 "content": json.dumps(payload, ensure_ascii=False)})
@@ -430,7 +392,7 @@ class GeminiApi(ApiEngine):
         contents = [types.Content(
             role="user" if t.get("role") != "assistant" else "model",
             parts=[types.Part(text=str(t.get("content") or ""))]) for t in turns]
-        collected = []
+        collected, used = [], []
 
         for _ in range(MAX_TOOL_ROUNDS):
             resp = client.models.generate_content(
@@ -440,12 +402,14 @@ class GeminiApi(ApiEngine):
                 text = (resp.text or "").strip()
                 if not text:
                     raise EngineError("빈 답이 돌아왔습니다.", "empty_completion")
-                return Answer(text=text, sources=dedup(collected), engine=self.name)
+                return Answer(text=text, sources=dedup(collected),
+                              tools_used=used, engine=self.name)
 
             contents.append(resp.candidates[0].content)
             parts = []
             for call in calls:
                 payload = _safe_call(call.name, dict(call.args or {}))
+                used.append(call.name.rsplit('__', 1)[-1])
                 collected += sources_from_tool_result(call.name, payload)
                 parts.append(types.Part.from_function_response(
                     name=call.name, response={"result": payload}))
@@ -471,7 +435,7 @@ class OpenAiApi(ApiEngine):
         messages = [{"role": "system", "content": system_rules()}]
         messages += [{"role": t.get("role", "user"), "content": str(t.get("content") or "")}
                      for t in turns]
-        collected = []
+        collected, used = [], []
 
         for _ in range(MAX_TOOL_ROUNDS):
             resp = client.chat.completions.create(
@@ -481,7 +445,8 @@ class OpenAiApi(ApiEngine):
                 text = (msg.content or "").strip()
                 if not text:
                     raise EngineError("빈 답이 돌아왔습니다.", "empty_completion")
-                return Answer(text=text, sources=dedup(collected), engine=self.name)
+                return Answer(text=text, sources=dedup(collected),
+                              tools_used=used, engine=self.name)
 
             messages.append(msg)
             for call in msg.tool_calls:
@@ -490,6 +455,7 @@ class OpenAiApi(ApiEngine):
                 except (json.JSONDecodeError, ValueError):
                     args = {}
                 payload = _safe_call(call.function.name, args)
+                used.append(call.function.name.rsplit('__', 1)[-1])
                 collected += sources_from_tool_result(call.function.name, payload)
                 messages.append({"role": "tool", "tool_call_id": call.id,
                                  "content": json.dumps(payload, ensure_ascii=False)})
@@ -509,17 +475,15 @@ def _safe_call(name: str, arguments: dict) -> dict:
 
 # 앞쪽이 우선. CLI가 먼저인 이유는 이미 낸 구독을 그대로 쓰기 때문이다
 # (API 엔진은 키에 요금이 붙는다).
-_CLI_ENGINES = [("claude", ClaudeCli), ("gemini", GeminiCli), ("codex", CodexCli)]
 _API_ENGINES = [AnthropicApi, GeminiApi, OpenAiApi]
 
 
 def available() -> list[Engine]:
     """지금 이 컴퓨터에서 실제로 쓸 수 있는 엔진들. 우선순위 순."""
     found = []
-    for exe, cls in _CLI_ENGINES:
-        path = shutil.which(exe)
-        if path:
-            found.append(cls(path))
+    path = shutil.which("claude")
+    if path:
+        found.append(ClaudeCli(path))
     for cls in _API_ENGINES:
         key = os.environ.get(cls.env_key)
         if key:
@@ -544,7 +508,7 @@ def ask(turns: list, engine: str | None = None) -> Answer:
     picked = pick(engine)
     if picked is None:
         raise EngineError(
-            "쓸 수 있는 AI가 없습니다. claude/gemini/codex 중 하나를 설치하거나 "
+            "쓸 수 있는 AI가 없습니다. Claude Code를 설치해 로그인하거나 "
             "ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENAI_API_KEY 중 하나를 넣어 주세요.",
             "no_engine")
     if not flatten(turns).strip():

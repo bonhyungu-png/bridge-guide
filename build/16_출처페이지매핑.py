@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """표 번호 -> 실제 PDF 물리 페이지의 지도를 새로 만든다.
 
-knowledge/pagemap.json은 표 캡션("[표 1.11] ...")을 찾아 물리 페이지를 기록하는데,
-그 캡션 글자는 지금 원본 PDF(data/원본pdf/*.pdf)에서 텍스트로 추출되지 않는다 -
-그림으로 렌더링된 것으로 보인다. 게다가 PDF가 보기 편하도록 2-up에서 1-up으로
+표 캡션("[표 1.11] ...")으로 페이지를 찾을 수는 없다. 그 캡션 글자가 지금
+원본 PDF(data/원본pdf/*.pdf)에서 텍스트로 추출되지 않기 때문이다 - 그림으로
+렌더링된 것으로 보인다. 게다가 PDF가 보기 편하도록 2-up에서 1-up으로
 다시 변환되면서 페이지 번호 자체가 밀렸다 - data/파생 쪽 마크다운에 박힌
 "면:" 값(옛 2-up 기준)을 그대로 믿으면 엉뚱한 페이지가 나온다
 (실제로 표1.11의 "면: 15"를 열어보면 케이블·교대 내용이었다. 진짜는 29면).
@@ -38,7 +38,6 @@ sys.path.insert(0, str(ROOT))
 
 from bridgekb import pdfnorm  # noqa: E402
 
-ARTIFACT_DATA = ROOT / "build" / "artifact_data.json"
 OUT = ROOT / "knowledge" / "출처페이지.json"
 
 MIN_WORD_LEN = 4
@@ -87,10 +86,21 @@ def find_page(words: set, index: dict) -> int | None:
     return page if count >= min(MIN_VOTES, len(rare)) else None
 
 
-def main() -> int:
-    bundle = json.loads(ARTIFACT_DATA.read_text("utf-8"))
-    tables = bundle["표"]
+NUMBERED = re.compile(r"^표(?P<no>\d+\.\d+(?:의\d+)?)\s")
 
+
+def tables_for(year: str) -> dict:
+    """그 판본의 번호 있는 표: {표번호: 마크다운 내용}."""
+    folder = ROOT / "data" / "파생" / "본문표" / ("안전점검진단_교량@%s" % year)
+    out = {}
+    for f in sorted(folder.glob("*.md")):
+        m = NUMBERED.match(f.stem)
+        if m:
+            out[m.group("no")] = f.read_text("utf-8")
+    return out
+
+
+def main() -> int:
     result: dict = {}
     for year in pdfnorm.available_years():
         if not pdfnorm.pdf_path(year).exists():
@@ -101,19 +111,21 @@ def main() -> int:
 
         year_out: dict = {}
         matched = missed = 0
-        for entry in tables.values():
-            info = entry.get("연도별", {}).get(year)
-            if not info or not info.get("번호"):
-                continue
-            words = candidate_words(info["내용"])
-            page = find_page(words, index)
+        for number, content in tables_for(year).items():
+            page = find_page(candidate_words(content), index)
             if page is None:
                 missed += 1
                 continue
-            year_out[info["번호"]] = page
+            year_out[number] = page
             matched += 1
         result[year] = year_out
         print("  %d개 매칭, %d개 실패 (표 %d개 중)" % (matched, missed, matched + missed))
+
+    if not any(result.values()):
+        # 한 건도 못 찾았는데 그대로 쓰면 이미 검증해 둔 지도가 통째로 날아간다.
+        # PDF를 못 찾는 환경에서 이 스크립트를 돌리면 실제로 그렇게 됐다.
+        print("아무 표도 찾지 못해 저장하지 않았습니다 -", OUT)
+        return 1
 
     OUT.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print("")

@@ -29,15 +29,13 @@ from pathlib import Path
 
 import pdfplumber
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-FILENAME = "01. 시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편)_교량편.pdf"
+from . import config
 
-# 원본 PDF는 두 곳에 있다. 연구_1 쪽이 2022를 포함해 네 연도가 모두 PDF라
-# 그쪽을 먼저 본다. 최상위 폴더는 2022가 HWP뿐이다.
-_PDF_ROOTS = [
-    ROOT / "연구_1" / "시설물의 안전 및 유지관리 세부지침.pdf",
-    ROOT / "시설물의 안전 및 유지관리 세부지침.pdf",
-]
+# 원본 PDF는 저장소 안에 번들돼 있다(data/원본pdf/{연도}.pdf).
+# 예전에는 저장소 **바깥**의 옛 작업 폴더를 가리키고 있어서, 새로 클론한
+# 컴퓨터에서는 available_years()가 빈 목록이었고 pdfnorm 테스트 17개가
+# 조용히 skip 됐다 - 초록불인데 실제로는 안 돌던 상태였다.
+PDF_DIR = config.DATA_ROOT / "원본pdf"
 
 # 기준 판본(2026)의 A4 세로 폭. 다른 판본의 배율은 이 값 대비로 계산한다.
 A4_WIDTH = 595.0
@@ -61,25 +59,15 @@ _GUTTER_BAND = (0.45, 0.55)
 
 
 def pdf_path(year: str) -> Path:
-    """해당 연도의 원본 PDF. 여러 후보 중 실제로 있는 것을 돌려준다."""
-    candidates = [root / ("%s 교량 관련 법령" % year) / FILENAME for root in _PDF_ROOTS]
-    for path in candidates:
-        if path.exists():
-            return path
-    return candidates[0]     # 없으면 첫 후보를 돌려줘 호출부가 exists()로 판단하게 한다
+    """해당 연도의 원본 PDF."""
+    return PDF_DIR / ("%s.pdf" % year)
 
 
 def available_years() -> list:
     """PDF가 실제로 있는 연도 목록."""
-    years = set()
-    for root in _PDF_ROOTS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            m = re.match(r"^(\d{4})\s", d.name)
-            if m and (d / FILENAME).exists():
-                years.add(m.group(1))
-    return sorted(years)
+    if not PDF_DIR.is_dir():
+        return []
+    return sorted(p.stem for p in PDF_DIR.glob("*.pdf") if p.stem.isdigit())
 
 
 @dataclass(frozen=True)

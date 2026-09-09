@@ -19,6 +19,8 @@ pytestmark = pytest.mark.skipif(
 
 ROOT = config.ROOT
 
+# 서버가 `claude --mcp-config`로 물려 주는 바로 그 진입점을 그대로 띄운다.
+
 HELLO = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
          "params": {"protocolVersion": "2025-06-18", "capabilities": {},
                     "clientInfo": {"name": "pytest", "version": "0"}}}
@@ -29,7 +31,7 @@ def talk(*requests) -> dict:
     """요청들을 서버에 흘려보내고 {id: 응답}을 돌려준다."""
     payload = b"".join(
         json.dumps(r, ensure_ascii=False).encode("utf-8") + b"\n" for r in requests)
-    proc = subprocess.run([sys.executable, "-m", "bridgekb", "mcp"],
+    proc = subprocess.run([sys.executable, str(ROOT / "bridge_mcp.py")],
                           cwd=ROOT, input=payload,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
     assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
@@ -111,7 +113,7 @@ def test_없는_메서드는_JSONRPC_오류다():
 def test_깨진_JSON에도_서버가_죽지_않는다():
     payload = (b'{ this is not json\n'
                + json.dumps(HELLO, ensure_ascii=False).encode("utf-8") + b"\n")
-    proc = subprocess.run([sys.executable, "-m", "bridgekb", "mcp"],
+    proc = subprocess.run([sys.executable, str(ROOT / "bridge_mcp.py")],
                           cwd=ROOT, input=payload,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
     assert proc.returncode == 0
@@ -121,7 +123,7 @@ def test_깨진_JSON에도_서버가_죽지_않는다():
 
 def test_stdout에는_프로토콜_외의_것이_섞이지_않는다():
     """진단 문구가 stdout에 새면 클라이언트가 파싱에 실패한다."""
-    proc = subprocess.run([sys.executable, "-m", "bridgekb", "mcp"],
+    proc = subprocess.run([sys.executable, str(ROOT / "bridge_mcp.py")],
                           cwd=ROOT,
                           input=json.dumps(HELLO).encode("utf-8") + b"\n",
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)

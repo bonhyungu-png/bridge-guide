@@ -1,19 +1,18 @@
-"""MCP 서버 (stdio) - 사용자가 이미 쓰는 AI가 우리 도구를 집어 쓰게 한다.
+"""MCP 서버 (stdio) - 빌려 온 AI에게 우리 도구를 건네는 내부 통로.
 
-왜 MCP인가: 자유 질문에 답하려면 AI가 필요한데, 우리가 AI를 부르면 API 키와
-비용이 생긴다. MCP는 반대 방향이다 - Claude Code든 Cursor든 사용자가 이미
-쓰고 있는 AI에게 "이런 도구가 있다"고 알려주고, 그 AI가 알아서 호출한다.
-우리 쪽 키도 서버 비용도 0원이고, 환경마다 다른 슬래시 명령을 만들 필요도 없다.
+왜 MCP인가: 웹 화면이 답을 만들려면 AI가 필요한데, 그 AI에게 우리 도구를
+쥐여 줄 표준 통로가 MCP다. 사용자가 이미 쓰는 Claude Code 구독을 그대로
+빌리면서도 등급 판정은 우리 코드가 하게 만드는 것이 목적이다.
 
 **의존성이 없다.** MCP stdio 전송은 줄바꿈으로 구분된 JSON-RPC 2.0일 뿐이라
 표준 라이브러리만으로 구현했다. `pip install` 없이 파이썬만 있으면 돈다 -
 이 프로젝트가 자체완결이어야 하는 이유와 같다.
 
-실행:
-    python -m bridgekb mcp
+사용자가 등록할 것은 없다. `서버.py`가 AI를 부를 때마다
+`claude --mcp-config`로 이 서버를 직접 물려 준다(`engines.mcp_config()`).
+직접 띄워 보려면:
 
-등록(예 - Claude Code):
-    claude mcp add bridge-guide -- python -m bridgekb mcp
+    python bridge_mcp.py
 
 주의: stdout은 프로토콜 전용이다. 진단 출력은 전부 stderr로 보낸다.
 """
@@ -23,14 +22,15 @@ import json
 import sys
 import traceback
 
-from . import config, tools
+from . import __version__, config, tools
 
 # 우리가 말할 줄 아는 프로토콜 판본들. 클라이언트가 요청한 판본을 알면
 # 그대로 되돌려 주고, 모르면 우리 최신 판본을 제시한다(그쪽이 맞춰준다).
 LATEST_PROTOCOL = "2025-06-18"
 KNOWN_PROTOCOLS = {"2024-11-05", "2025-03-26", LATEST_PROTOCOL}
 
-SERVER_INFO = {"name": "bridge-guide", "title": "교량 지침서 가이드", "version": "0.3.0"}
+SERVER_INFO = {"name": "bridge-guide", "title": "교량 지침서 가이드",
+               "version": __version__}
 
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600

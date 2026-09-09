@@ -1,19 +1,23 @@
-"""도구 6개 - 모든 환경(MCP · CLI · 웹앱)이 공유하는 유일한 구현.
+"""도구 6개 - 등급이 정해지는 유일한 자리.
 
-웹앱(`webapp/템플릿.html`)의 `TOOLS` 배열이 이 도구들의 명세이자 먼저 만들어진
-JS 구현이다. 여기 파이썬 구현은 **같은 이름, 같은 입력, 같은 출력 키**를 쓴다 -
-그래야 브라우저에서 물어도 Cursor에서 물어도 같은 답이 나온다. 출력 키를
-영어로 두는 것도 그래서다(웹앱 쪽을 따라간 것).
+질문에 답하는 경로는 웹 하나뿐이다(`서버.py`). 브라우저가 `/ask`로 질문을
+보내면 서버가 AI를 빌려 오고, AI는 여기 있는 도구를 호출한다. 도구 구현은
+**이 파일 하나**다 - 예전에는 같은 도구가 웹앱 JS에도 복사돼 있어서 정렬
+방식이 어긋나는 것만으로 창마다 다른 표를 돌려줬다. 사본을 없애 그 종류의
+어긋남을 구조적으로 막는다.
 
-등급은 여기(`grade_lookup`)에서만 정해진다. 모델이 수치를 직접 비교해
-등급을 말하는 것은 금지다 - 그 규칙은 `SYSTEM_RULES`에 적혀 있고 MCP 서버가
-서버 지시문으로 함께 실어 보낸다.
+등급은 `grade_lookup`에서만 정해진다. 모델이 수치를 직접 비교해 등급을
+말하는 것은 금지이고, 그 규칙은 `SYSTEM_RULES`에 적혀 있다.
+
+이름이 애매하면 **하나를 골라 답하지 않는다.** 걸린 후보를 그대로 돌려주고
+모델이 되묻게 한다 - 조용히 고른 답에 출처까지 붙으면 틀렸다는 걸 아무도
+알아챌 수 없기 때문이다.
 """
 from __future__ import annotations
 
 from . import anchor, kb
 
-# 모델에게 주는 행동 지침. 웹앱 템플릿의 RULES와 같은 내용이다.
+# 모델에게 주는 행동 지침. 서버가 시스템 프롬프트로 실어 보낸다.
 SYSTEM_RULES = """당신은 「시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편) 교량편」 질의응답 도우미입니다.
 2022 / 2023 / 2024 / 2026 네 개 판본을 다룹니다. 한국어로 답합니다.
 
@@ -25,6 +29,7 @@ SYSTEM_RULES = """당신은 「시설물의 안전 및 유지관리 실시 세�
 5. 수치 없는 서술형(정성) 기준은 등급을 확정하지 마세요. 해당 기준 원문을 보여주고 최종 판단은 점검자 몫이라고 밝힙니다.
 6. 도구가 못 찾으면 모른다고 답합니다. 지침서에 없는 내용을 지어내지 마세요.
 7. 부재명·지표명이 애매하면 list_members로 실제 이름을 확인한 뒤 진행합니다.
+8. 도구가 candidates를 돌려주며 "여러 개에 걸립니다"라고 하면, 그중 하나를 임의로 고르지 마세요. 후보를 사용자에게 보여주고 어느 것인지 되묻습니다. 예: 교면포장은 시멘트와 아스팔트가 서로 다른 표이고 등급도 다릅니다.
 
 알려진 함정: "데크플레이트 부식"은 철근부식이 아니라 누수 및 백태 계열 항목입니다. 표면손상은 부재에 따라 표면손상 / 열화 및 손상 / 표면열화로 이름이 다릅니다.
 
@@ -40,8 +45,31 @@ _YEAR_PROP = {"type": "string",
 
 # ---------------- 도구 구현 ----------------
 
+def _year_error(exc: kb.UnknownYear) -> dict:
+    return {"found": False, "reason": str(exc), "available_years": exc.available}
+
+
+def _ambiguous(kind: str, query: str, names: list, year: str) -> dict:
+    """어느 쪽인지 못 정했다. 하나를 골라 답하지 않고 후보를 돌려준다.
+
+    예전에는 걸린 것 중 첫 번째를 말없이 골랐다. "교면포장 포장불량률 5%"가
+    시멘트(b등급)로 붙을지 아스팔트(c등급)로 붙을지 사용자는 알 수 없는데
+    출처까지 붙어 나오니 확인할 방법도 없었다.
+    """
+    return {
+        "found": False,
+        "reason": "%s 이름이 여러 개에 걸립니다. 어느 것인지 정해야 답할 수 있습니다." % kind,
+        "query": query,
+        "candidates": names,
+        "year": year,
+    }
+
+
 def list_members(year: str | None = None) -> dict:
-    y = kb.year_of(year)
+    try:
+        y = kb.year_of(year)
+    except kb.UnknownYear as exc:
+        return _year_error(exc)
     return {
         "year": y,
         "members": [{"member": m, "indicators": kb.indicators(y, m)}
@@ -50,7 +78,10 @@ def list_members(year: str | None = None) -> dict:
 
 
 def grade_lookup(member: str, indicator: str, value, year: str | None = None) -> dict:
-    y = kb.year_of(year)
+    try:
+        y = kb.year_of(year)
+    except kb.UnknownYear as exc:
+        return _year_error(exc)
     try:
         v = float(value)
     except (TypeError, ValueError):
@@ -60,34 +91,54 @@ def grade_lookup(member: str, indicator: str, value, year: str | None = None) ->
     if not m:
         return {"found": False, "reason": "그런 부재가 없습니다",
                 "hint": "list_members로 실제 부재명을 확인하세요", "year": y}
+    if m.ambiguous:
+        return _ambiguous("부재", str(member or ""), m.names, y)
+    name = m.one
 
-    ind = kb.find_indicator(y, m, str(indicator or ""))
+    ind = kb.find_indicator(y, name, str(indicator or ""))
     if not ind:
         return {"found": False, "reason": "그 부재에 그런 지표가 없습니다",
-                "member": m, "available_indicators": kb.indicators(y, m), "year": y}
+                "member": name, "available_indicators": kb.indicators(y, name), "year": y}
+    if ind.ambiguous:
+        return _ambiguous("지표", str(indicator or ""), ind.names, y)
 
-    cands = [r for r in kb.numeric_rules(y) if r["부재"] == m and r["지표"] == ind]
+    # 같은 지표를 여러 표기로 적어 둔 표가 있다("표면 손상면적"/"표면손상면적").
+    # 표기 하나만 보면 등급 구간이 통째로 빠진다 - PSC 거더 d등급(10%이상)이
+    # 실제로 그렇게 사라져 있었다. 걸린 표기 전부를 후보로 삼는다.
+    spellings = set(ind.names)
+    cands = [r for r in kb.numeric_rules(y)
+             if r["부재"] == name and r["지표"] in spellings]
     for r in cands:
         if kb.satisfies(r, v):
-            return {"found": True, "year": y, "member": m, "indicator": ind, "value": v,
-                    "grade": r["등급"], "quote": r["원문"], "unit": r.get("단위"),
-                    "source": {"table": r["표"], "page": r["면"]}}
+            out = {"found": True, "year": y, "member": name, "indicator": r["지표"],
+                   "value": v, "grade": r["등급"], "quote": r["원문"],
+                   "unit": r.get("단위"), "source": {"table": r["표"], "page": r["면"]}}
+            if len(spellings) > 1:
+                out["indicator_spellings"] = sorted(spellings)
+            return out
 
     return {"found": False, "reason": "이 값에 맞는 수치 구간이 없습니다", "year": y,
-            "member": m, "indicator": ind, "value": v,
+            "member": name, "indicator": sorted(spellings)[0], "value": v,
             "candidates": [{"grade": r["등급"], "quote": r["원문"],
                             "table": r["표"], "page": r["면"]} for r in cands]}
 
 
 def qualitative_criteria(member: str, year: str | None = None) -> dict:
-    y = kb.year_of(year)
+    try:
+        y = kb.year_of(year)
+    except kb.UnknownYear as exc:
+        return _year_error(exc)
+
     m = kb.find_member(y, str(member or "")) or kb.find_any_member(y, str(member or ""))
     if not m:
         return {"found": False, "reason": "그런 부재가 없습니다", "year": y}
+    if m.ambiguous:
+        return _ambiguous("부재", str(member or ""), m.names, y)
+    name = m.one
 
-    quals = [r for r in kb.rules(y) if r.get("연산") == "정성" and r.get("부재") == m]
+    quals = [r for r in kb.rules(y) if r.get("연산") == "정성" and r.get("부재") == name]
     return {
-        "found": bool(quals), "year": y, "member": m,
+        "found": bool(quals), "year": y, "member": name,
         "note": "정성 기준입니다. 등급을 확정하지 말고 후보로만 제시하세요.",
         "criteria": [{"grade": r["등급"], "item": r.get("항목"),
                       "text": str(r.get("원문") or "")[:300],
@@ -105,6 +156,9 @@ def _number_index(index: dict) -> dict:
     return out
 
 
+MAX_TABLE_HITS = 6
+
+
 def table_lookup(query: str) -> dict:
     q = kb.squash(str(query or ""))
     if not q:
@@ -119,7 +173,8 @@ def table_lookup(query: str) -> dict:
         if q in key or 번호일치:
             hits.append(entry)
     hits.sort(key=lambda e: e["제목"])
-    hits = hits[:6]
+    total = len(hits)
+    hits = hits[:MAX_TABLE_HITS]
 
     if not hits:
         return {"found": False, "query": str(query or "")}
@@ -139,11 +194,24 @@ def table_lookup(query: str) -> dict:
                 out["warning"] = ("표%s은 연도마다 다른 표를 가리킵니다: " % no + " / ".join(
                     "%s=%s" % (yy, others[yy]) for yy in sorted(others)))
         results.append(out)
-    return {"found": True, "results": results}
+
+    result = {"found": True, "results": results, "total": total}
+    if total > len(results):
+        # 잘렸다는 사실을 숨기면 모델이 "그런 표는 없다"고 답해 버린다.
+        result["truncated"] = True
+        result["hint"] = ("%d개 중 %d개만 보입니다. 검색어를 더 구체적으로 주세요."
+                          % (total, len(results)))
+    return result
+
+
+MAX_TABLE_CHARS = 6000
 
 
 def table_content(title: str, year: str | None = None) -> dict:
-    y = kb.year_of(year)
+    try:
+        y = kb.year_of(year)
+    except kb.UnknownYear as exc:
+        return _year_error(exc)
     t = kb.squash(str(title or ""))
     index = anchor.index()
 
@@ -161,23 +229,32 @@ def table_content(title: str, year: str | None = None) -> dict:
         return {"found": False, "reason": "%s년판에는 이 표가 없습니다" % y,
                 "available_years": sorted(entry["연도별"])}
 
-    return {"found": True, "year": y, "title": entry["제목"], "number": info["번호"],
-            "content": kb.read_table(info["경로"])[:6000]}
+    body = kb.read_table(info["경로"])
+    out = {"found": True, "year": y, "title": entry["제목"], "number": info["번호"],
+           "content": body[:MAX_TABLE_CHARS]}
+    if len(body) > MAX_TABLE_CHARS:
+        out["truncated"] = True
+    return out
+
+
+MAX_BODY_HITS = 8
 
 
 def body_search(query: str, year: str | None = None) -> dict:
-    y = kb.year_of(year)
+    try:
+        y = kb.year_of(year)
+    except kb.UnknownYear as exc:
+        return _year_error(exc)
     q = str(query or "").strip()
     if not q:
         raise ValueError("query가 비었습니다")
 
-    hits = []
-    for section, text in kb.body_lines(y):
-        if q in text:
-            hits.append({"section": section, "text": text[:400]})
-            if len(hits) >= 8:
-                break
-    return {"found": bool(hits), "year": y, "query": q, "hits": hits}
+    picked, total = kb.body_hits(y, q, MAX_BODY_HITS)
+    hits = [{"section": h["section"], "text": h["text"][:400]} for h in picked]
+    out = {"found": bool(hits), "year": y, "query": q, "hits": hits, "total": total}
+    if total > len(hits):
+        out["truncated"] = True
+    return out
 
 
 # ---------------- 명세 ----------------
@@ -191,7 +268,7 @@ SPECS = [
     },
     {
         "name": "grade_lookup",
-        "description": "부재·지표·실측값으로 등급을 판정한다. 판정규칙표를 코드가 직접 대조해 등급·근거 원문·출처(표번호,면)를 돌려준다. 등급은 반드시 이 도구로만 구한다. 맞는 구간이 없으면 후보 조건들을 돌려준다.",
+        "description": "부재·지표·실측값으로 등급을 판정한다. 판정규칙표를 코드가 직접 대조해 등급·근거 원문·출처(표번호,면)를 돌려준다. 등급은 반드시 이 도구로만 구한다. 이름이 여러 부재에 걸리면 등급 대신 candidates를 돌려주므로, 그때는 임의로 고르지 말고 사용자에게 되묻는다. 맞는 구간이 없으면 후보 조건들을 돌려준다.",
         "inputSchema": {"type": "object", "properties": {
             "year": _YEAR_PROP,
             "member": {"type": "string", "description": "부재명. 예: 콘크리트 바닥판"},
@@ -220,7 +297,7 @@ SPECS = [
     },
     {
         "name": "table_content",
-        "description": "표 하나의 실제 내용(등급별 기준 원문)을 돌려준다. table_lookup으로 제목을 확인한 뒤 그 제목으로 호출한다. 길면 잘라서 돌려준다.",
+        "description": "표 하나의 실제 내용(등급별 기준 원문)을 돌려준다. table_lookup으로 제목을 확인한 뒤 그 제목으로 호출한다. 길면 잘라서 돌려주고 truncated를 표시한다.",
         "inputSchema": {"type": "object", "properties": {
             "title": {"type": "string",
                       "description": "표 제목(table_lookup이 돌려준 title을 그대로)"},
