@@ -35,6 +35,25 @@
 | **MCP 서버** (`bridge_mcp.py`) | MCP를 지원하는 AI 도구 | 이미 쓰는 AI에 붙일 때 |
 | **CLI / 파이썬** (`python -m bridgekb`) | 없음 | 스크립트·자동화 |
 
+### 0. 처음 받는 컴퓨터라면 — 터미널 열기부터
+
+아래 세 창구는 전부 **이 저장소를 그 컴퓨터로 받아 놓은 뒤**의 이야기다.
+아직 안 받았다면 먼저 터미널을 연다.
+
+- **Windows**: 시작 메뉴 → `PowerShell` 검색 → 클릭
+- **Mac**: `Cmd+Space` → `터미널` 검색 → 엔터
+
+뜬 창(검은/파란 화면)에 아래 두 줄을 그대로 입력하고 매 줄 엔터:
+
+```bash
+git clone https://github.com/bonhyungu-png/bridge-guide.git
+cd bridge-guide
+```
+
+이제 이 터미널의 위치가 `bridge-guide` 폴더 안이다. 아래 모든 명령은
+**이 상태의 이 터미널**에서 이어서 치면 된다(터미널을 새로 열면
+`cd bridge-guide`부터 다시 한다). 파이썬 3.10 이상이 필요하다.
+
 ### 1. 웹 화면 — 물어보고, 근거가 된 PDF 쪽을 눈으로 본다
 
 ```bash
@@ -98,19 +117,38 @@ python -m bridgekb engines        # 쓸 수 있는 AI 목록
 
 의존성은 없다. **파이썬 3.10 이상**만 있으면 된다.
 
-#### 등록 방법 (환경마다 한 번씩)
+#### 등록 방법 (환경마다 한 번씩) — 어디서 무엇을 여는지
 
-아래에서 `<저장소>`는 이 폴더의 **절대경로**다.
+아래에서 `<저장소>`는 0단계에서 `cd bridge-guide` 한 그 폴더의 **절대경로**다.
+경로가 헷갈리면 그 터미널에 `pwd`(Mac) 또는 `(Get-Location).Path`(PowerShell)를
+쳐서 화면에 뜨는 값을 그대로 쓴다.
 
-**Claude Code**
+**Claude Code** — 터미널만 쓴다
+
+0단계 그 터미널에 이어서:
 
 ```bash
-claude mcp add bridge-guide -- python <저장소>/bridge_mcp.py
+claude
 ```
 
-이 저장소를 열어서 쓰는 경우엔 `.mcp.json`이 이미 있으므로 등록이 필요 없다.
+터미널 화면이 Claude Code 채팅으로 바뀐다(이 저장소를 열면 `.mcp.json`이
+이미 있어서 등록이 저절로 된다 — 위 `claude mcp add` 명령은 **다른 폴더에서**
+이 도구를 쓰고 싶을 때만 필요하다). 처음 한 번 "이 프로젝트의 MCP 서버를
+신뢰합니까?" 승인이 뜨면 `y`나 Enter. 그다음부터는 **그 화면 맨 아래
+입력줄**에 그냥 질문을 타이핑한다.
 
-**Cursor** — `~/.cursor/mcp.json` (프로젝트 한정이면 `.cursor/mcp.json`)
+```bash
+claude mcp add bridge-guide -- python <저장소>/bridge_mcp.py   # 다른 폴더에서 쓸 때
+```
+
+**Cursor** — 앱을 열고 설정 파일을 편집한다
+
+1. **Cursor 앱**을 연다(터미널이 아니다). `File → Open Folder`로 `bridge-guide`
+   폴더를 연다.
+2. 왼쪽 파일 탐색기에 `.cursor/mcp.json` 파일을 만들거나 연다(프로젝트
+   한정). 컴퓨터 전체에 적용하려면 홈 폴더의 `~/.cursor/mcp.json`.
+3. 아래 내용을 쓰고 저장(`Ctrl+S`). 이미 다른 서버가 있으면 `"bridge-guide"`
+   한 줄만 그 `mcpServers` 안에 추가한다.
 
 ```json
 {
@@ -120,7 +158,57 @@ claude mcp add bridge-guide -- python <저장소>/bridge_mcp.py
 }
 ```
 
-**VS Code (GitHub Copilot)** — `.vscode/mcp.json`
+4. **Cursor를 완전히 껐다가 다시 연다**(재시작해야 인식된다).
+5. `Ctrl+L`로 채팅 패널을 열고 거기에 질문을 타이핑한다.
+
+**Gemini CLI** — 설정 파일 편집 후 터미널에서 실행
+
+0단계 그 터미널에서 설정 파일을 먼저 연다(Windows):
+
+```bash
+notepad $env:USERPROFILE\.gemini\settings.json
+```
+
+(파일이 없다는 메모장 안내가 뜨면 "예"를 눌러 새로 만든다.) 아래 내용을
+붙여넣고 저장:
+
+```json
+{
+  "mcpServers": {
+    "bridge-guide": { "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
+  }
+}
+```
+
+다시 터미널로 돌아와 `bridge-guide` 폴더 안에서:
+
+```bash
+gemini
+```
+
+터미널이 Gemini 채팅 화면이 된다. 그 입력줄에 질문을 타이핑한다.
+
+**Codex CLI** — Gemini CLI와 같은 방식
+
+```bash
+notepad $env:USERPROFILE\.codex\config.toml
+```
+
+```toml
+[mcp_servers.bridge-guide]
+command = "python"
+args = ["<저장소>/bridge_mcp.py"]
+```
+
+저장 후 터미널에서:
+
+```bash
+codex
+```
+
+그 채팅창에 질문을 타이핑한다.
+
+**VS Code (GitHub Copilot)** — 프로젝트 안 `.vscode/mcp.json`
 
 ```json
 {
@@ -128,24 +216,6 @@ claude mcp add bridge-guide -- python <저장소>/bridge_mcp.py
     "bridge-guide": { "type": "stdio", "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
   }
 }
-```
-
-**Gemini CLI** — `~/.gemini/settings.json`
-
-```json
-{
-  "mcpServers": {
-    "bridge-guide": { "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
-  }
-}
-```
-
-**Codex CLI** — `~/.codex/config.toml`
-
-```toml
-[mcp_servers.bridge-guide]
-command = "python"
-args = ["<저장소>/bridge_mcp.py"]
 ```
 
 **ChatGPT** — 붙지 않는다. ChatGPT는 원격(HTTP) MCP 커넥터만 지원하고 이 서버는
