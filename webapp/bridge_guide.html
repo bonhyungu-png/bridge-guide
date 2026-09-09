@@ -243,6 +243,9 @@
   /* ---- 답변 아래 출처: 인용한 표가 실제로 있는 PDF 쪽을 작은 그림으로 나열하고,
      누르면 크게 본다 ---- */
   .src-block { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .src-note { font-size: 13px; color: var(--text-2); line-height: 1.7; }
+  .src-note-why { margin-top: 8px; font-size: 12.5px; color: var(--text-3); }
+  .src-note-why code { font-family: var(--mono); font-size: 12px; }
   .src-title {
     font-size: 11px; color: var(--text-3); text-transform: uppercase;
     letter-spacing: .06em; margin-bottom: 10px;
@@ -426,6 +429,20 @@
     var block = document.createElement('div');
     block.className = 'src-block';
     block.innerHTML = '<div class="src-title">출처</div>';
+
+    if (!pdfImages) {
+      // 그림은 못 그려도 어느 쪽을 근거로 삼았는지는 알려줘야 한다.
+      var note = document.createElement('div');
+      note.className = 'src-note';
+      note.innerHTML = pages.map(function(p){
+        return esc(p.year + '년판' + (p.table ? (' · 표 ' + p.table) : '') + ' · ' + p.page + '쪽');
+      }).join('<br>') +
+        '<div class="src-note-why">원본 쪽 그림을 띄우려면 서버에서 ' +
+        '<code>pip install pdfplumber</code> 후 다시 켜세요.</div>';
+      block.appendChild(note);
+      screen.appendChild(block);
+      return;
+    }
     var list = document.createElement('div');
     list.className = 'src-list';
     pages.forEach(function(p){
@@ -606,6 +623,9 @@
     if (wasActive) activateLastOrEmpty();
   }
   var serverReady = false;
+  // 출처 그림은 서버에 pdfplumber 가 있어야 만들어진다. 없으면 그림 자리에
+  // 이유를 적는다 - 예전에는 깨진 그림만 남아서 원인을 알 수 없었다.
+  var pdfImages = true;
   var turns = [];
   var busy = false;
   var ctl = null;
@@ -818,7 +838,11 @@
     try {
       var probe = await fetch('_engine', { cache: 'no-store' });
       var info = probe.ok ? await probe.json() : null;
-      if (info && info.ok) { serverReady = true; return; }
+      if (info && info.ok) {
+        serverReady = true;
+        pdfImages = info.pdf_images !== false;
+        return;
+      }
       disableAsk('<b>답을 만들 AI를 찾지 못했습니다.</b> ' +
                  'Claude Code를 설치해 로그인하거나, ANTHROPIC_API_KEY · ' +
                  'GEMINI_API_KEY · OPENAI_API_KEY 중 하나를 넣고 서버를 다시 켜 주세요. ' +

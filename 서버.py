@@ -64,6 +64,20 @@ GUARD_HEADER = "X-Bridge-Guide"
 _RENDER_LOCK = threading.Lock()
 
 
+def pdf_images_available() -> bool:
+    """출처 그림을 만들 수 있는가.
+
+    pdfplumber 는 선택 의존성이라 없을 수 있다. 없다는 사실을 **화면과 터미널이
+    알 수 있어야** 한다 - 예전에는 조용히 요청이 죽어서, 다른 컴퓨터에서
+    "그림만 안 뜬다"는 것 말고는 아무 단서가 없었다.
+    """
+    try:
+        import pdfplumber  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def render_page_png(year: str, page: int) -> bytes | None:
     """PDF 전체를 열지 않고 그 한 쪽만 잘라 그림으로 낸다. 한 번 만들면 디스크에 캐시한다."""
     cache_path = PAGE_IMG_DIR / year / ("%d.png" % page)
@@ -74,7 +88,12 @@ def render_page_png(year: str, page: int) -> bytes | None:
     if not pdf_path.exists():
         return None
 
-    import pdfplumber  # 무거운 의존성이라 실제로 쓸 때만 불러온다
+    try:
+        import pdfplumber  # 무거운 의존성이라 실제로 쓸 때만 불러온다
+    except ImportError:
+        # 여기서 예외가 튀어나가면 응답 없이 연결이 끊겨(RemoteDisconnected)
+        # 브라우저에는 깨진 그림만 남는다. 답은 그대로 나와야 한다.
+        return None
 
     with _RENDER_LOCK:
         if cache_path.exists():   # 잠그는 동안 다른 요청이 이미 만들어 놨을 수 있다
@@ -158,6 +177,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": picked is not None,
                 "engine": picked.name if picked else None,
                 "available": [e.name for e in engines.available()],
+                "pdf_images": pdf_images_available() and PDF_DIR.is_dir(),
             })
             return
 
@@ -231,8 +251,11 @@ def doctor() -> int:
         p = config.rules_path_for(y)
         print("  %s 판정규칙: %s" % (y, "있음" if p.exists() else "없음 ← " + str(p)))
     print("웹 화면     : %s" % ("있음" if HTML.exists() else "없음 ← " + str(HTML)))
-    print("원본 PDF    : %s (출처 그림용, 없어도 답은 나온다)"
-          % ("있음" if PDF_DIR.exists() else "없음"))
+    print("원본 PDF    : %s" % ("있음" if PDF_DIR.exists() else "없음"))
+    if pdf_images_available():
+        print("출처 그림   : 됩니다")
+    else:
+        print("출처 그림   : 안 됩니다 ← pip install pdfplumber (답은 그대로 나옵니다)")
 
     found = engines.available()
     if found:
@@ -393,6 +416,10 @@ def main(argv=None) -> int:
         print("      python 서버.py --engines 로 무엇이 필요한지 확인하세요.", file=sys.stderr)
     else:
         print("엔진: %s (%s)" % (picked.name, picked.detail))
+
+    if not pdf_images_available():
+        print("참고: pdfplumber 가 없어 답 아래 출처 그림이 뜨지 않습니다. "
+              "pip install pdfplumber", file=sys.stderr)
 
     url = "http://127.0.0.1:%d/" % PORT
     print("교량 지침서 가이드: %s" % url)
