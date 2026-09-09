@@ -24,116 +24,168 @@
 
 ---
 
-## 쓰는 법 — 세 가지 창구
+## 설치
 
-같은 엔진(`bridgekb`)을 세 가지 창구가 나눠 쓴다. 창만 다르고 답은 같다.
-설치할 것은 파이썬 3.10 이상뿐이고, **특정 회사 도구에 매이지 않는다.**
+파이썬 3.10 이상만 있으면 된다. 그 외 의존성은 없다.
 
-| 창구 | 무엇이 필요한가 | 언제 쓰나 |
-|---|---|---|
-| **웹 화면** (`서버.py`) | 이 컴퓨터의 AI 하나 (아래 참고) | 사람이 직접 물어볼 때 |
-| **MCP 서버** (`bridge_mcp.py`) | MCP를 지원하는 AI 도구 | 이미 쓰는 AI에 붙일 때 |
-| **CLI / 파이썬** (`python -m bridgekb`) | 없음 | 스크립트·자동화 |
+### Claude Code
 
-### 가장 빠른 길 — Claude Code라면 내려받지 않는다
+GitHub에서 바로 가져온다. **`git clone`도 Git 설치도 필요 없다.**
 
-Claude Code를 쓰는 사람은 `git clone`도, Git 설치도 필요 없다.
-Claude Code 안에서 아래 두 줄을 차례로 치면 끝이다.
+* 마켓플레이스를 등록하세요:
 
-```bash
+```
 /plugin marketplace add bonhyungu-png/bridge-guide
 ```
-```bash
+
+* 플러그인을 설치하세요:
+
+```
 /plugin install bridge-guide@bridge-guide
 ```
 
-GitHub에서 곧바로 가져와 붙는다. 이 방식은
+* 나중에 갱신할 때:
 
-- **`.mcp.json` 신뢰 확인 창이 뜨지 않는다.** 플러그인으로 들어온 MCP 서버는
-  설치할 때 한 번 승인한 것으로 갈음한다.
-- **어느 폴더에서 `claude`를 켜든 된다.** 저장소 안에 있을 필요가 없다.
-- 교량 질문을 하면 **웹 화면이 스스로 열린다**(아래 1번 창구와 같은 화면).
-  터미널에 텍스트로 답을 받고 싶으면 "텍스트로 답해"라고 덧붙인다.
-
-나중에 갱신할 때:
-
-```bash
+```
 /plugin marketplace update bridge-guide
 ```
 
-Cursor · Gemini CLI · Codex CLI · 순수 API를 쓰거나, 데이터를 직접 고치려면
-아래처럼 저장소를 내려받는다.
+설치하면 어느 폴더에서 `claude`를 켜든 붙는다. MCP 신뢰 확인 창은 뜨지 않는다.
+교량 질문을 하면 웹 화면이 스스로 열린다 — 터미널에서 텍스트로 받고 싶으면
+"텍스트로 답해"를 덧붙인다.
 
-### 0. 처음 받는 컴퓨터라면 — 터미널 열기부터
+### Gemini CLI
 
-아래 세 창구는 전부 **이 저장소를 그 컴퓨터로 받아 놓은 뒤**의 이야기다.
-아직 안 받았다면 먼저 터미널을 연다.
-
-- **Windows**: 시작 메뉴 → `PowerShell` 검색 → 클릭
-- **Mac**: `Cmd+Space` → `터미널` 검색 → 엔터
-
-그 창에 `git --version`을 쳐 본다. `'git'은 내부 또는 외부 명령...`처럼
-못 찾는다는 안내가 뜨면 Git이 없는 것이니 먼저 설치한다.
-
-**Windows — 터미널 명령으로 설치 (먼저 시도)**
+* 확장을 설치하세요:
 
 ```bash
-winget install --id Git.Git -e --source winget
+gemini extensions install https://github.com/bonhyungu-png/bridge-guide
 ```
 
-설치가 끝나면 **그 터미널 창을 닫았다가 새로 열어야** PATH가 반영된다.
-새 창에서 `git --version`으로 확인.
-
-`winget`도 없다는 안내가 뜨면(아주 오래된 Windows) 직접 받는다:
-[git-scm.com/download/win](https://git-scm.com/download/win) 접속 →
-자동으로 받아지는 설치 파일 실행 → 화면에 나오는 옵션은 전부
-**기본값(Next만 계속)**. 설치 끝나면 터미널을 새로 열어서 확인.
-
-**Mac**
+* 나중에 갱신할 때:
 
 ```bash
-git --version
+gemini extensions update bridge-guide
 ```
-을 치면 Xcode 커맨드라인 도구 설치 여부를 물어보는 창이 뜬다 —
-"설치"를 누르면 그걸로 Git도 같이 깔린다.
 
-Git이 준비됐으면, 그 터미널에 아래 두 줄을 그대로 입력하고 매 줄 엔터:
+### Cursor
+
+Cursor는 **연 폴더**에서 설정을 읽는다. 저장소를 받아 폴더로 열면 된다.
+
+* 저장소를 받으세요:
+
+```bash
+git clone https://github.com/bonhyungu-png/bridge-guide.git
+```
+
+* Cursor에서 `File → Open Folder`로 그 `bridge-guide` 폴더를 엽니다.
+* `Settings → MCP`에서 `bridge-guide`가 초록불인지 확인합니다.
+
+`.cursor/mcp.json`과 `.cursor/rules/`가 저장소에 들어 있어 그 외 설정은 없다.
+
+### Codex CLI
+
+* 저장소를 받으세요:
 
 ```bash
 git clone https://github.com/bonhyungu-png/bridge-guide.git
 cd bridge-guide
 ```
 
-이제 이 터미널의 위치가 `bridge-guide` 폴더 안이다. 아래 모든 명령은
-**이 상태의 이 터미널**에서 이어서 치면 된다(터미널을 새로 열면
-`cd bridge-guide`부터 다시 한다). 파이썬 3.10 이상이 필요하다.
+* MCP 서버를 등록하세요(`$PWD`는 위에서 들어간 그 폴더):
 
-### 1. 웹 화면 — 물어보고, 근거가 된 PDF 쪽을 눈으로 본다
+```bash
+codex mcp add bridge-guide -- python "$PWD/bridge_mcp.py"
+```
+
+행동 지침은 저장소의 `AGENTS.md`를 Codex가 자동으로 읽는다.
+
+### 그 밖의 MCP 클라이언트 (VS Code Copilot 등)
+
+* 저장소를 받은 뒤, 그 도구의 MCP 설정에 아래를 넣으세요.
+  `<저장소>`는 받은 폴더의 절대경로입니다.
+
+```json
+{
+  "mcpServers": {
+    "bridge-guide": { "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
+  }
+}
+```
+
+### 웹 화면만 쓰기 (AI 도구에 붙이지 않고)
+
+* 저장소를 받은 뒤 그 폴더에서:
 
 ```bash
 python 서버.py
 ```
 
-http://127.0.0.1:8765 이 열린다. 질문을 넣으면 왼쪽에 질문 목록이 쌓이고,
-가운데에 답이 뜬다. 답 아래 **출처**에는 그 답이 인용한 표가 실제로 실린
-**원본 PDF 쪽을 잘라낸 그림**이 나열된다 — 누르면 크게 볼 수 있고
-Ctrl+휠로 확대·축소된다.
+`http://127.0.0.1:8765/`가 열린다. 이 컴퓨터에 있는 AI(Claude Code · Gemini CLI ·
+Codex CLI, 또는 API 키)를 자동으로 찾아 쓴다. 쓸 수 있는 게 뭔지 보려면
+`python 서버.py --engines`.
 
-```
-브라우저 질문 → 서버.py → engines.ask() → 도구 6개 → 답 + 인용한 PDF 쪽
-```
+### ChatGPT
 
-**엔진은 이 컴퓨터에 있는 것을 자동으로 고른다.** 무엇이 잡히는지 확인:
+붙지 않는다. ChatGPT는 원격(HTTP) MCP 커넥터만 지원하고 이 서버는 로컬 stdio
+방식이다. 웹 화면을 쓰거나, 서버를 HTTP로 감싸 어딘가에 올려야 한다(그러면
+무료·무설치라는 전제가 깨진다).
+
+---
+
+> **검증 상태.** Claude Code 경로는 GitHub에서 새로 받아 저장소 바깥에서
+> 질문까지 돌려 확인했다. Gemini CLI · Cursor · Codex CLI는 각 도구의 규격에
+> 맞춰 매니페스트를 넣어 두었으나 그 도구들이 깔린 환경에서 아직 실행해 보지
+> 못했다 — 안 되면 이슈로 알려주면 고친다.
+
+### Git이 없다면
+
+위에서 `git clone`이 필요한 경로를 쓰는데 `'git'은 내부 또는 외부 명령...`이
+뜬다면 Git이 없는 것이다.
+
+* **Windows**: 시작 메뉴 → `PowerShell` → 아래를 치고, 끝나면 **창을 닫았다 새로 연다**(PATH 반영).
 
 ```bash
-python 서버.py --engines
+winget install --id Git.Git -e --source winget
 ```
+
+`winget`도 없다는 아주 오래된 Windows라면 [git-scm.com/download/win](https://git-scm.com/download/win)에서
+받아 기본값(Next만 계속)으로 설치한다.
+
+* **Mac**: `Cmd+Space` → `터미널` → `git --version`을 치면 Xcode 커맨드라인 도구
+  설치 창이 뜬다. "설치"를 누르면 Git도 같이 깔린다.
+
+## 무엇을 물어보나
+
+명령어가 아니라 도구다. `/무언가`를 치는 게 아니라 **그냥 자연어로 물으면** 된다.
+
+```
+콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?
+표1.31이 2024년이랑 2026년이랑 같은 표야?
+선택과업은 언제 실시해?
+```
+
+등급을 코드가 판정한다는 원칙은 어느 경로로 붙이든 같다. **우리가 AI를 부르는 게
+아니라, 이미 쓰고 있는 AI가 우리 도구를 집어 쓴다** — 그래서 API 키도 서버 비용도
+들지 않는다.
+
+터미널에서 화면 없이 같은 답을 받으려면:
+
+```bash
+python -m bridgekb ask "콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?"
+python -m bridgekb engines        # 쓸 수 있는 AI 목록
+```
+
+### 웹 화면에서 보이는 것
+
+물어본 답 아래에 **근거가 된 PDF 쪽이 그림으로** 깔린다. 가로로 늘어놓고,
+누르면 크게 뜨고, 그 상태에서 `Ctrl+휠`로 확대·축소한다.
 
 | 엔진 | 필요한 것 | 비고 |
 |---|---|---|
 | `claude-cli` | Claude Code 설치·로그인 | 도구 호출 내역을 정확히 읽는다 |
-| `gemini-cli` | Gemini CLI 설치·로그인 | MCP 등록 필요 (아래) |
-| `codex-cli` | Codex CLI 설치·로그인 | MCP 등록 필요 (아래) |
+| `gemini-cli` | Gemini CLI 설치·로그인 | MCP 등록 필요 |
+| `codex-cli` | Codex CLI 설치·로그인 | MCP 등록 필요 |
 | `anthropic-api` | `ANTHROPIC_API_KEY` | 도구 루프를 서버가 직접 돈다 |
 | `gemini-api` | `GEMINI_API_KEY` | 〃 |
 | `openai-api` | `OPENAI_API_KEY` | 〃 |
@@ -146,144 +198,14 @@ CLI 엔진은 **이미 낸 구독을 그대로 쓴다**(API 키·추가 요금 �
 > 출처 그림에는 `pdfplumber`와 `data/원본pdf/*.pdf`가 필요하다.
 > 없으면 답은 그대로 나오고 그림만 안 뜬다.
 
-### 1-2. 터미널에서 바로 묻기
-
-화면 없이도 같은 답을 받는다. 엔진 선택 규칙도 같다.
-
-```bash
-python -m bridgekb ask "콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?"
-python -m bridgekb engines        # 쓸 수 있는 AI 목록
-```
-
-### 2. 자유 질문 — MCP 서버
-
-등급을 코드가 판정한다는 원칙은 지키면서 자유롭게 묻고 싶다면 MCP로 붙인다.
-**우리가 AI를 부르는 게 아니라, 이미 쓰고 있는 AI가 우리 도구를 집어 쓴다** —
-그래서 API 키도 서버 비용도 들지 않는다.
-
-명령어가 아니라 도구다. `/무언가`를 치는 게 아니라 **그냥 자연어로 물으면** 된다.
-
-```
-콘크리트 바닥판 균열폭 0.25mm면 몇 등급이야?
-표1.31이 2024년이랑 2026년이랑 같은 표야?
-선택과업은 언제 실시해?
-```
-
-의존성은 없다. **파이썬 3.10 이상**만 있으면 된다.
-
-#### 등록 방법 (환경마다 한 번씩) — 어디서 무엇을 여는지
-
-아래에서 `<저장소>`는 0단계에서 `cd bridge-guide` 한 그 폴더의 **절대경로**다.
-경로가 헷갈리면 그 터미널에 `pwd`(Mac) 또는 `(Get-Location).Path`(PowerShell)를
-쳐서 화면에 뜨는 값을 그대로 쓴다.
-
-**Claude Code** — 터미널만 쓴다
-
-0단계 그 터미널에 이어서:
-
-```bash
-claude
-```
-
-터미널 화면이 Claude Code 채팅으로 바뀐다(이 저장소를 열면 `.mcp.json`이
-이미 있어서 등록이 저절로 된다 — 위 `claude mcp add` 명령은 **다른 폴더에서**
-이 도구를 쓰고 싶을 때만 필요하다). 처음 한 번 "이 프로젝트의 MCP 서버를
-신뢰합니까?" 승인이 뜨면 `y`나 Enter. 그다음부터는 **그 화면 맨 아래
-입력줄**에 그냥 질문을 타이핑한다.
-
-```bash
-claude mcp add bridge-guide -- python <저장소>/bridge_mcp.py   # 다른 폴더에서 쓸 때
-```
-
-**Cursor** — 앱을 열고 설정 파일을 편집한다
-
-1. **Cursor 앱**을 연다(터미널이 아니다). `File → Open Folder`로 `bridge-guide`
-   폴더를 연다.
-2. 왼쪽 파일 탐색기에 `.cursor/mcp.json` 파일을 만들거나 연다(프로젝트
-   한정). 컴퓨터 전체에 적용하려면 홈 폴더의 `~/.cursor/mcp.json`.
-3. 아래 내용을 쓰고 저장(`Ctrl+S`). 이미 다른 서버가 있으면 `"bridge-guide"`
-   한 줄만 그 `mcpServers` 안에 추가한다.
-
-```json
-{
-  "mcpServers": {
-    "bridge-guide": { "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
-  }
-}
-```
-
-4. **Cursor를 완전히 껐다가 다시 연다**(재시작해야 인식된다).
-5. `Ctrl+L`로 채팅 패널을 열고 거기에 질문을 타이핑한다.
-
-**Gemini CLI** — 설정 파일 편집 후 터미널에서 실행
-
-0단계 그 터미널에서 설정 파일을 먼저 연다(Windows):
-
-```bash
-notepad $env:USERPROFILE\.gemini\settings.json
-```
-
-(파일이 없다는 메모장 안내가 뜨면 "예"를 눌러 새로 만든다.) 아래 내용을
-붙여넣고 저장:
-
-```json
-{
-  "mcpServers": {
-    "bridge-guide": { "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
-  }
-}
-```
-
-다시 터미널로 돌아와 `bridge-guide` 폴더 안에서:
-
-```bash
-gemini
-```
-
-터미널이 Gemini 채팅 화면이 된다. 그 입력줄에 질문을 타이핑한다.
-
-**Codex CLI** — Gemini CLI와 같은 방식
-
-```bash
-notepad $env:USERPROFILE\.codex\config.toml
-```
-
-```toml
-[mcp_servers.bridge-guide]
-command = "python"
-args = ["<저장소>/bridge_mcp.py"]
-```
-
-저장 후 터미널에서:
-
-```bash
-codex
-```
-
-그 채팅창에 질문을 타이핑한다.
-
-**VS Code (GitHub Copilot)** — 프로젝트 안 `.vscode/mcp.json`
-
-```json
-{
-  "servers": {
-    "bridge-guide": { "type": "stdio", "command": "python", "args": ["<저장소>/bridge_mcp.py"] }
-  }
-}
-```
-
-**ChatGPT** — 붙지 않는다. ChatGPT는 원격(HTTP) MCP 커넥터만 지원하고 이 서버는
-로컬 stdio 방식이다. ChatGPT에서 쓰려면 웹 GUI를 쓰거나, 서버를 HTTP로
-감싸 어딘가에 올려야 한다(그러면 무료·무설치라는 전제가 깨진다).
-
-#### 등록됐는지 확인
+### 잘 붙었는지 확인
 
 ```bash
 python -m bridgekb tools     # 노출되는 도구 6개의 명세
 python -m bridgekb doctor    # 지식베이스 상태
 ```
 
-#### MCP 도구 6개
+### 붙는 도구 6개
 
 | 도구 | 하는 일 |
 |---|---|
