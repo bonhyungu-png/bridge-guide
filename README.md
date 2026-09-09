@@ -35,6 +35,35 @@
 | **MCP 서버** (`bridge_mcp.py`) | MCP를 지원하는 AI 도구 | 이미 쓰는 AI에 붙일 때 |
 | **CLI / 파이썬** (`python -m bridgekb`) | 없음 | 스크립트·자동화 |
 
+### 가장 빠른 길 — Claude Code라면 내려받지 않는다
+
+Claude Code를 쓰는 사람은 `git clone`도, Git 설치도 필요 없다.
+Claude Code 안에서 아래 두 줄을 차례로 치면 끝이다.
+
+```bash
+/plugin marketplace add bonhyungu-png/bridge-guide
+```
+```bash
+/plugin install bridge-guide@bridge-guide
+```
+
+GitHub에서 곧바로 가져와 붙는다. 이 방식은
+
+- **`.mcp.json` 신뢰 확인 창이 뜨지 않는다.** 플러그인으로 들어온 MCP 서버는
+  설치할 때 한 번 승인한 것으로 갈음한다.
+- **어느 폴더에서 `claude`를 켜든 된다.** 저장소 안에 있을 필요가 없다.
+- 교량 질문을 하면 **웹 화면이 스스로 열린다**(아래 1번 창구와 같은 화면).
+  터미널에 텍스트로 답을 받고 싶으면 "텍스트로 답해"라고 덧붙인다.
+
+나중에 갱신할 때:
+
+```bash
+/plugin marketplace update bridge-guide
+```
+
+Cursor · Gemini CLI · Codex CLI · 순수 API를 쓰거나, 데이터를 직접 고치려면
+아래처럼 저장소를 내려받는다.
+
 ### 0. 처음 받는 컴퓨터라면 — 터미널 열기부터
 
 아래 세 창구는 전부 **이 저장소를 그 컴퓨터로 받아 놓은 뒤**의 이야기다.
