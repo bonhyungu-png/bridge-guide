@@ -24,6 +24,10 @@
     --shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 14px rgba(15,23,42,.05);
     --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
     --sans: 'IBM Plex Sans KR', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    /* 움직임은 도구가 굼떠 보이지 않을 만큼만 준다 - 색은 120ms, 등장은 180ms. */
+    --ease: cubic-bezier(.2,.7,.3,1);
+    --dur-1: 120ms;
+    --dur-2: 180ms;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -69,6 +73,9 @@
   }
 
   * { box-sizing: border-box; }
+  /* all: unset 을 쓰는 버튼(.stop-btn 등)은 브라우저가 [hidden] 에 주는 display: none
+     까지 지워버려서, 코드가 hidden 을 걸어도 계속 보였다. 여기서 되돌린다. */
+  [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: var(--sans); font-size: 15px; line-height: 1.6;
@@ -130,6 +137,10 @@
   .msg.me .bubble { background: var(--accent-weak); color: var(--text); border: 1px solid var(--border); }
   .msg.ai .bubble { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
   .msg.ai .bubble.pending { color: var(--text-3); font-style: italic; }
+  /* 답이 도착하면 코드가 pending 클래스를 뗀다. 그 순간 이 선택자가 처음 맞아떨어져
+     애니메이션이 재생된다 - 답을 넣는 코드는 손대지 않고도 등장이 붙는다. */
+  .msg.ai .bubble:not(.pending) { animation: bubble-in var(--dur-2) var(--ease) both; }
+  @keyframes bubble-in { from { opacity: 0; transform: translateY(6px); } }
   .msg .bubble b { font-weight: 600; }
   .msg .bubble code {
     font-family: var(--mono); font-size: 13px; background: var(--surface-2);
@@ -149,17 +160,32 @@
     background: var(--surface); border: 1px solid var(--border-strong);
     border-radius: 8px; padding: 10px 12px; outline: none; resize: vertical;
     line-height: 1.6;
+    transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
   }
-  .chat-input-row textarea:focus { border-color: var(--accent); }
+  .chat-input-row textarea:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak);
+  }
   .chat-input-row textarea::placeholder { color: var(--text-3); }
   .chat-buttons { display: flex; flex-direction: row; gap: 8px; }
   .chat-buttons .go-btn, .chat-buttons .stop-btn { flex: 1; }
-  .chat-buttons .go-btn { padding: 10px 14px; }
+  /* all: unset 이 앞줄의 flex 까지 지우므로 여기서 다시 준다. */
+  .chat-buttons .go-btn {
+    all: unset; box-sizing: border-box; cursor: pointer; text-align: center;
+    font-size: 13px; font-weight: 600; color: var(--accent-ink); background: var(--accent);
+    border-radius: 8px; padding: 10px 14px; flex: 1;
+    transition: filter var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+  }
+  .chat-buttons .go-btn:not(:disabled):hover { filter: brightness(1.08); }
+  .chat-buttons .go-btn:not(:disabled):active { transform: scale(.98); }
+  .chat-buttons .go-btn:disabled { cursor: default; }
   .stop-btn {
     all: unset; box-sizing: border-box; cursor: pointer; text-align: center;
     font-size: 13px; font-weight: 500; color: var(--bad); background: var(--bad-weak);
     border-radius: 8px; padding: 10px 14px;
+    transition: filter var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
   }
+  .stop-btn:hover { filter: brightness(1.06); }
+  .stop-btn:active { transform: scale(.98); }
   .chat-hint { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
   footer.foot {
@@ -216,6 +242,7 @@
   .q-item-main {
     all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0;
     padding: 6px 4px 6px 8px; border-radius: 6px; border-left: 3px solid transparent;
+    transition: background var(--dur-1) var(--ease), border-left-color var(--dur-1) var(--ease);
   }
   .q-item:hover .q-item-main { background: var(--surface-2); }
   .q-item.active .q-item-main { border-left-color: var(--accent); }
@@ -223,6 +250,7 @@
   .q-item .q-text {
     font-size: 13px; color: var(--text); line-height: 1.4;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: color var(--dur-1) var(--ease);
   }
   .q-item .q-status {
     font-size: 11px; color: var(--accent); margin-top: 3px;
@@ -234,11 +262,16 @@
     width: 22px; height: 22px; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; line-height: 1; color: var(--text-3);
+    transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
   }
   .q-del:hover { background: var(--surface-2); color: var(--bad); }
 
+  /* 들어오는 화면만 페이드한다. 나가는 화면까지 페이드하면 둘이 잠깐 같이 자리를
+     차지해 목록 높이가 출렁인다 - 어차피 안 보이는 쪽이라 즉시 지우는 게 낫다.
+     transform 없이 opacity 만 쓰는 것도 의도다(안쪽 요소의 기준 상자를 안 바꾼다). */
   .result-screen { display: none; }
-  .result-screen.active { display: block; }
+  .result-screen.active { display: block; animation: screen-in var(--dur-2) var(--ease) both; }
+  @keyframes screen-in { from { opacity: 0; } }
 
   /* ---- 답변 아래 출처: 인용한 표가 실제로 있는 PDF 쪽을 작은 그림으로 나열하고,
      누르면 크게 본다 ---- */
@@ -253,7 +286,7 @@
   /* 출처가 많아 가로 폭을 넘으면 줄바꿈하지 않고 옆으로 드래그해서 본다. */
   .src-list {
     display: flex; flex-wrap: nowrap; gap: 14px;
-    overflow-x: auto; padding-bottom: 8px; cursor: grab;
+    overflow-x: auto; padding: 3px 0 8px; cursor: grab;
     scrollbar-width: thin;
   }
   .src-list.dragging { cursor: grabbing; }
@@ -272,10 +305,16 @@
   .src-thumb img {
     width: 100%; height: 672px; object-fit: cover; object-position: top center;
     display: block; border: 1px solid var(--border); border-radius: 8px;
-    background: var(--surface-2); transition: border-color .12s;
+    background: var(--surface-2);
+    transition: border-color var(--dur-1) var(--ease),
+                transform var(--dur-1) var(--ease),
+                box-shadow var(--dur-1) var(--ease);
     -webkit-user-drag: none; user-select: none;
   }
-  .src-thumb:hover img { border-color: var(--accent); }
+  /* 2px 떠오르는 만큼 .src-list 위쪽에 여백을 줘 뒀다 - 안 그러면 잘린다. */
+  .src-thumb:hover img {
+    border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow);
+  }
 
   /* flex + align-items:center로 가운데 정렬하면, 내용이 넘칠 때 시작(위/왼쪽)
      쪽은 스크롤해도 안 보이는 브라우저 공통 문제가 있다 - grid + place-items로
@@ -286,6 +325,13 @@
     cursor: zoom-out; overflow: auto;
   }
   .src-modal[hidden] { display: none; }
+  /* 열 때만 움직인다. 닫을 때는 코드가 img 의 src 를 바로 비우기 때문에,
+     닫힘 애니메이션을 넣으면 빈 상자가 사라지는 그림이 된다.
+     썸네일과 같은 주소를 쓰므로 이미지는 이미 캐시에 있다 - 빈 채로 뜨지 않는다. */
+  .src-modal:not([hidden]) { animation: modal-in 160ms var(--ease) both; }
+  .src-modal:not([hidden]) img { animation: modal-img-in 160ms var(--ease) both; }
+  @keyframes modal-in { from { opacity: 0; } }
+  @keyframes modal-img-in { from { opacity: 0; transform: scale(.97); } }
   .src-modal img {
     max-width: 100%; max-height: 100%; display: block; cursor: default;
     border-radius: 6px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.45);
@@ -300,17 +346,35 @@
     cursor: pointer; width: 34px; height: 34px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     color: #fff; font-size: 20px; line-height: 1; background: rgba(255,255,255,.15);
+    transition: background var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
   }
   .src-modal-close:hover { background: rgba(255,255,255,.28); }
+  .src-modal-close:active { transform: scale(.94); }
 
-  .typing-dots { display: inline-flex; gap: 4px; padding: 3px 0; }
-  .typing-dots span {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--text-3);
-    animation: typing-blink 1.4s infinite ease-in-out both;
+  /* 기다리는 동안 점 세 개 대신, 곧 올 답의 모양(문단 - 표 - 문단)을 미리 그린다.
+     뒤에 표가 온다는 걸 미리 알려주는 쪽이 기다리는 느낌을 줄인다. */
+  .skeleton { display: flex; flex-direction: column; gap: 9px; }
+  .skeleton span {
+    display: block; border-radius: 5px;
+    background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
+    background-size: 200% 100%;
+    animation: sk-shimmer 1.4s ease-in-out infinite;
   }
-  .typing-dots span:nth-child(2) { animation-delay: .16s; }
-  .typing-dots span:nth-child(3) { animation-delay: .32s; }
-  @keyframes typing-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+  .sk-line { height: 11px; }
+  .sk-line.short { width: 55%; }
+  .sk-table { height: 108px; border-radius: 7px; }
+  @keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+  /* 운영체제에서 "동작 줄이기"를 켠 사람에게는 위의 움직임을 전부 끈다.
+     꺼도 스켈레톤 모양과 상태 글자는 그대로 보이므로 알려주는 내용은 그대로다. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 
 
@@ -747,7 +811,9 @@
     var bubble = rs.bubble;
     var trace = rs.trace;
     bubble.classList.add('pending');
-    bubble.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+    bubble.innerHTML = '<div class="skeleton" aria-hidden="true">' +
+      '<span class="sk-line"></span><span class="sk-line"></span>' +
+      '<span class="sk-table"></span><span class="sk-line short"></span></div>';
 
     var qItem = addQuestionItem(q, rs.screen);
 

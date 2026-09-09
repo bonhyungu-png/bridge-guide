@@ -8,7 +8,7 @@
     {
       "name": "bridge-guide",
       "description": "「시설물의 안전 및 유지관리 실시 세부지침(안전점검·진단 편) 교량편」 질의응답",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "source": "./"
     }
   ]
